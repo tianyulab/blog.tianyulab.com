@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>天御实验室官方博客</title>
+    <link>https://blog.tianyulab.com/feed/index.xml</link>
+    <description>Recent content on 天御实验室官方博客</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-CN</language>
+    <copyright>Copyright (c) 2018. All rights reserved.</copyright>
+    <atom:link href="https://blog.tianyulab.com/feed/index.xml" rel="self" type="application/rss+xml" />
+    
+  </channel>
+</rss>
