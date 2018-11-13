@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html class="no-js">
+<head>
+  <base href="https://blog.tianyulab.com/">
+  <script>
+    document._writeOriginal = document.write;
+    document.write = function(str) {
+        if (str.indexOf('livereload.js') > -1) {
+            document._writeOriginal(str);
+        } else {
+            document._writeOriginal('<!-- Be Hijack!! -->');
+        }
+    }
+  </script>
+  <title>威胁猎杀实战（一）：平台 - 天御实验室官方博客</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<meta name="keywords" content="xxx,">
+<meta name="description" content="​ 在国内Threat Hunting常被翻译成威胁追踪或威胁狩猎，我们认为：“未知攻焉知防，未知防焉知攻”。蓝方并不一定要处于被动防守的状态，">
+<meta name="author" content="Zer0d0y">
+<meta name="publisher" content="Zer0d0y">
+<meta name="generator" content="http://gohugo.io/"/>
+
+<meta itemprop="name" content="威胁猎杀实战（一）：平台 - 天御实验室官方博客">
+<meta itemprop="description" content="​ 在国内Threat Hunting常被翻译成威胁追踪或威胁狩猎，我们认为：“未知攻焉知防，未知防焉知攻”。蓝方并不一定要处于被动防守的状态，">
+<meta itemprop="image" content="https://blog.tianyulab.com/public/coderzh.jpg">
+
+<meta property="og:title" content="威胁猎杀实战（一）：平台 - 天御实验室官方博客" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-01/" />
+<meta property="og:image" content="https://blog.tianyulab.com/public/coderzh.jpg" />
+<meta property="og:description" content="​ 在国内Threat Hunting常被翻译成威胁追踪或威胁狩猎，我们认为：“未知攻焉知防，未知防焉知攻”。蓝方并不一定要处于被动防守的状态，">
+
+<meta name="twitter:card" content="summary">
+<meta name="twitter:site" content="@Zer0d0y">
+<meta name="twitter:title" content="威胁猎杀实战（一）：平台 - 天御实验室官方博客">
+<meta name="twitter:description" content="​ 在国内Threat Hunting常被翻译成威胁追踪或威胁狩猎，我们认为：“未知攻焉知防，未知防焉知攻”。蓝方并不一定要处于被动防守的状态，">
+<meta name="twitter:creator" content="@Zer0d0y">
+<meta name="twitter:image" content="https://blog.tianyulab.com/public/coderzh.jpg">
+
+  <script>document.documentElement.className = document.documentElement.className.replace("no-js", "js");</script>
+  <link rel="canonical" href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-01/">
+  <link rel='shortlink' href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-01/"/>
+  <link rel="shortcut icon" href="https://blog.tianyulab.com/public/favicon.ico"/>
+  
+<link rel="stylesheet" id="human-style-css" href="https://blog.tianyulab.com/wp-content/themes/hueman/style.css" type="text/css" media="all"/>
+<link rel="stylesheet" id="human-style-css2" href="https://blog.tianyulab.com/wp-content/themes/hueman-child/style.css" type="text/css" media="all"/>
+<link rel="stylesheet" id="responsive-css" href="https://blog.tianyulab.com/wp-content/themes/hueman/responsive.css" type="text/css" media="all"/>
+<link rel="stylesheet" id="font-awesome-css" href="https://blog.tianyulab.com/wp-content/themes/hueman/fonts/font-awesome.min.css" type="text/css" media="all"/>
+<link rel="stylesheet" href="https://blog.tianyulab.com/public/highlight/styles/github.css">
+<script src="https://blog.tianyulab.com/public/highlight/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<link rel="stylesheet" id="human-style-css3" href="https://blog.tianyulab.com/wp-content/themes/hueman-child/user.css" type="text/css" media="all"/>
+<link rel="stylesheet" href="public/font/hack/css/hack.min.css">
+
+<script type="text/javascript" src="assets/js/jquery-2.1.1.min.js"></script>
+<script type="text/javascript" src="wp-content/themes/hueman/js/jquery.jplayer.min.js"></script>
+<script type="text/javascript" src="wp-content/themes/hueman/js/scripts.js"></script>
+<script type="text/javascript" src="assets/picturefill/picturefill.min.js"></script>
+<script type="text/javascript" src="assets/js/jquery.matchHeight-min.js"></script>
+<script type="text/javascript" async defer src="assets/js/myblog.js"></script>
+
+</head>
+
+<body class="single single-post single-format-standard col-3cm full-width topbar-enabled chrome">
+<div id="wrapper">
+  <header id="header">
+
+  <nav class="nav-container group" id="nav-topbar">
+    <div class="nav-toggle"><i class="fa fa-bars"></i></div>
+    <div class="nav-text"></div>
+    <div class="nav-wrap container">
+      <a rel="nofollow" href="https://blog.tianyulab.com/" class="nav-cs-icon">
+        <img width="40" height="40" src="https://blog.tianyulab.com/public/coderzh.jpg" alt="coderzh" title="Home">
+      </a>
+      <ul id="menu-default-menu" class="nav container-inner group">
+        <li class="menu-item menu-item-type-post_type menu-item-object-page">
+          <a rel="nofollow" href="https://blog.tianyulab.com/">首页</a>
+        </li>
+        
+        <li class="menu-item menu-item-type-post_type menu-item-object-page">
+          <a rel="nofollow" href="https://blog.tianyulab.com/categories/%E5%A8%81%E8%83%81%E6%84%9F%E7%9F%A5/">威胁感知</a>
+        </li>
+        
+        <li class="menu-item menu-item-type-post_type menu-item-object-page">
+          <a rel="nofollow" href="https://blog.tianyulab.com/categories/%E5%A8%81%E8%83%81%E6%A3%80%E6%B5%8B/">威胁检测</a>
+        </li>
+        
+        <li class="menu-item menu-item-type-post_type menu-item-object-page">
+          <a rel="nofollow" href="https://blog.tianyulab.com/categories/%E5%A8%81%E8%83%81%E7%8C%8E%E6%9D%80/">威胁猎杀</a>
+        </li>
+        
+        <li class="menu-item menu-item-type-post_type menu-item-object-page">
+          <a rel="nofollow" href="https://blog.tianyulab.com/categories/Misc/">Misc</a>
+        </li>
+        
+        
+        <li class="menu-item menu-item-type-post_type menu-item-object-page">
+          <a rel="nofollow" href="https://blog.tianyulab.com/post/">归档</a>
+        </li>
+        
+        <li class="menu-item menu-item-type-post_type menu-item-object-page">
+          <a rel="nofollow" href="https://blog.tianyulab.com/about/">关于我</a>
+        </li>
+        
+        <li class="menu-item menu-item-type-post_type menu-item-object-page">
+          <a rel="nofollow" href="https://blog.tianyulab.com/">天御实验室</a>
+        </li>
+        
+        <li class="menu-item menu-item-type-post_type menu-item-object-page">
+          <a rel="nofollow" href="https://blog.tianyulab.com/feed.xml" type="application/rss+xml" target="_blank">订阅</a>
+        </li>
+        <li class="menu-item menu-item-type-post_type menu-item-text">
+        
+        </li>
+      </ul>
+    </div>
+
+    <div class="container">
+      <div class="container-inner">
+        <div class="toggle-search"><i class="fa fa-search"></i></div>
+        <div class="search-expand">
+          <div class="search-expand-inner">
+            <form method="get" class="searchform themeform" action="https://www.google.com/search">
+              <div>
+                <input type="text" class="search" name="q" placeholder="Press enter to start searching">
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+    
+
+  </nav>
+  
+
+  <div class="container group">
+    <div class="container-inner">
+
+      <div class="group pad">
+
+        <div class="group pad">
+          <h1 class="site-title">
+            <a rel="nofollow" href="https://blog.tianyulab.com/" rel="home">
+              <img style="border-radius: 50%;width:72px;height:72px;margin:0 auto;" alt="coderzh" src="https://blog.tianyulab.com/public/coderzh.jpg"></img>
+              天御实验室官方博客
+            </a>
+          </h1>
+          <p class="site-description"> 每个人对自己的生命都有无限的期许，坚持|运动|学习，让生命之树常青。 </p>
+        </div>
+
+      </div>
+    </div>
+    
+  </div>
+  
+
+</header>
+
+
+
+  <div class="container" id="page">
+    <div class="container-inner">
+      <div class="main">
+        <div class="main-inner group">
+          <section class="content">
+            <div class="page-title pad group">
+              <ul class="meta-single group">
+                
+                <li class="category">
+                  <a href="https://blog.tianyulab.com/categories/%E5%A8%81%E8%83%81%E7%8C%8E%E6%9D%80/" rel="category tag">威胁猎杀</a>
+                </li>
+                
+              </ul>
+            </div>
+
+            <div class="pad group">
+
+              <article
+                  class="post type-post status-publish format-standard has-post-thumbnail hentry category-australien tag-bondi-beach tag-city2surf tag-sydney">
+                <div class="post-inner group">
+
+                  <h1 class="post-title">威胁猎杀实战（一）：平台</h1>
+
+                  <p class="post-byline">
+                    by  · 2018年11月13日 · 2936 Words ·
+                    ~6min reading time |
+                    <a href="https://github.com/tianyulab/blog.tianyulab.com/master/content/post/ty-practical-guide-to-threat-hunting-01.md"
+                       target="_blank">Improve on <i class="fa fa-github"></i></a>
+                  </p>
+
+                  <div class="clear"></div>
+
+       <div id="toc" class="well col-md-4 col-sm-6" style="float: top;padding: 0.01em 10px;border-radius: 10px 0px 0px 10px;-moz-border-radius: 10px 0px 0px 10px;-webkit-border-radius: 10px 0px 0px 10px;border: 2px dotted #0040ff;">
+     目录：
+     <nav id="TableOfContents">
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li><a href="#1-部署elastic-stack-容器化">1.部署Elastic Stack（容器化）</a></li>
+<li><a href="#2-部署bro">2.部署Bro</a>
+<ul>
+<li><a href="#2-1-安装">2.1 安装</a></li>
+<li><a href="#2-2-配置">2.2 配置</a>
+<ul>
+<li><a href="#2-2-1-bro配置文件">2.2.1 Bro配置文件</a></li>
+<li><a href="#2-2-2-使用systemd管理bro">2.2.2 使用systemd管理Bro</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#3-整合elastic-stack-kafka-和bro">3.整合Elastic Stack，[Kafka]和Bro</a>
+<ul>
+<li><a href="#3-1-bro日志101">3.1 Bro日志101</a></li>
+<li><a href="#3-2-使用elastic-stack直接处理bro的csv格式日志">3.2 使用Elastic Stack直接处理Bro的csv格式日志</a></li>
+<li><a href="#3-3-使用elastic-stack-kafka处理bro的json格式日志">3.3 使用Elastic Stack + Kafka处理Bro的json格式日志</a>
+<ul>
+<li><a href="#3-3-1-安装kafka">3.3.1 安装Kafka</a></li>
+<li><a href="#3-3-2-安装kafka插件-metron-bro-plugin-kafka">3.3.2 安装kafka插件（metron-bro-plugin-kafka）</a></li>
+<li><a href="#3-3-3-配置bro把日志发送到kafka">3.3.3 配置Bro把日志发送到Kafka</a></li>
+<li><a href="#3-3-4-配置logstash接收kafka日志">3.3.4 配置Logstash接收Kafka日志</a></li>
+<li><a href="#3-3-5-一键部署脚本">3.3.5 一键部署脚本</a></li>
+</ul></li>
+</ul></li>
+</ul></li>
+</ul></li>
+</ul>
+</nav>
+    </div>
+
+                  <div class="entry">
+                    <div class="entry-inner">
+                      
+                      
+
+<pre><code> ​    在国内Threat Hunting常被翻译成威胁追踪或威胁狩猎，我们认为：“未知攻焉知防，未知防焉知攻”。蓝方并不一定要处于被动防守的状态，完全可以主动猎杀对手！
+
+ ​    本文是威胁猎杀实战系列的第一篇，按照本文的操作步骤，只需几次Copy&amp;Paste即可搭建一套基于Elastic Stack的威胁猎杀平台。在后面的文章我们会进一步完善我们的平台。
+</code></pre>
+
+<p>
+<figure >
+    
+        <img src="images/ty-practical-guide-to-threat-hunting-01-img01.jpeg" />
+    
+    
+</figure>
+
+<table class="image">
+<caption align="bottom"> 天御威胁感知平台® </caption>
+</table></p>
+
+<p>
+<figure >
+    
+        <img src="images/ty-practical-guide-to-threat-hunting-01-img02.jpeg" />
+    
+    
+</figure>
+
+<table class="image">
+<caption align="bottom"> NSM架构 </caption>
+</table></p>
+
+<h3 id="1-部署elastic-stack-容器化">1.部署Elastic Stack（容器化）</h3>
+
+<pre><code>$ echo &quot;nameserver 9.9.9.9&quot; &gt; /etc/resolv.conf
+$ git clone https://github.com/Zer0d0y/docker-elk.git
+$ docker-compose build &amp;&amp; docker-compose up -d
+
+访问Kibana web UI：http://localhost:5601
+
+完整指南参考：
+https://github.com/Zer0d0y/docker-elk
+</code></pre>
+
+<h3 id="2-部署bro">2.部署Bro</h3>
+
+<h4 id="2-1-安装">2.1 安装</h4>
+
+<p><strong>方式一：使用官方提供的Binary软件包</strong></p>
+
+<pre><code>Ubuntu 16.04：
+$ wget https://github.com/tianyulab/Threat_Hunting_with_ELK/raw/master/Bro/Install_Bro_from_binary.sh
+$ chmod +x Install_Bro_from_binary.sh &amp;&amp; ./Install_Bro_from_binary.sh
+</code></pre>
+
+<p>Bro repository提供5个Binary软件包：</p>
+
+<ul>
+<li>Bro，包含meta-package</li>
+<li>bro-core，包含Bro core和scripts</li>
+<li>broctl，包含Bro control</li>
+<li>libbroccoli和libbroccoli-dev，包含libbroccoli及其开发头文件</li>
+</ul>
+
+<pre><code>Ubuntu 16.04：
+$ wget -nv http://download.opensuse.org/repositories/network:bro/xUbuntu_16.04/Release.key -O Release.key
+$ sudo apt-key add - &lt; Release.key
+$ sudo apt-get update
+$ sudo sh -c &quot;echo 'deb http://download.opensuse.org/repositories/network:/bro/xUbuntu_16.04/ /' &gt; /etc/apt/sources.list.d/bro.list&quot;
+$ sudo apt-get update
+$ sudo apt-get install bro
+
+# 注意：官方同时提供nightly binary builds：https://www.bro.org/download/nightly-packages.html
+</code></pre>
+
+<p><strong>方式二：源码安装</strong></p>
+
+<p>依赖软件包：</p>
+
+<pre><code>$ cmake make gcc g++ flex bison libpcap-dev libssl-dev python-dev swig zlib1g-dev
+</code></pre>
+
+<p>其他依赖软件包（可选）：</p>
+
+<pre><code>参考：https://www.bro.org/sphinx/install/install.html#id6
+</code></pre>
+
+<pre><code>Ubuntu 16.04：
+$ wget https://github.com/tianyulab/Threat_Hunting_with_ELK/raw/master/Bro/Install_Bro_from_source.sh
+$ chmod +x Install_Bro_from_source.sh &amp;&amp; ./Install_Bro_from_source.sh
+
+# 注意：也可以安装Bro开发版：https://www.bro.org/sphinx/install/install.html#id9
+</code></pre>
+
+<p><strong>方式三：容器化方式（Docker）</strong></p>
+
+<pre><code>参考：
+https://github.com/bro/bro-docker
+</code></pre>
+
+<h4 id="2-2-配置">2.2 配置</h4>
+
+<h5 id="2-2-1-bro配置文件">2.2.1 Bro配置文件</h5>
+
+<pre><code>$PREFIX == 默认值：/opt/bro或/usr/local/bro
+
+配置监听网络接口：$PREFIX/etc/node.cfg
+配置本地网络地址：$PREFIX/etc/networks.cfg
+主配置文件：$PREFIX/etc/broctl.cfg
+
+# 完整配置参考：https://www.zer0d0y.info/post/Bro-plus-ELK/
+</code></pre>
+
+<h5 id="2-2-2-使用systemd管理bro">2.2.2 使用systemd管理Bro</h5>
+
+<pre><code># 修改Bro接口名称
+$ INAME=$(ip -o link show | sed -rn '/^[0-9]+: en/{s/.: ([^:]*):.*/\1/p}')
+$ sed -i &quot;s/eth0/$INAME/g&quot; /usr/local/bro/etc/node.cfg
+$ wget https://github.com/tianyulab/Threat_Hunting_with_ELK/raw/master/Bro/Bro_systemd.service -O /etc/systemd/system/bro.service
+$ systemctl daemon-reload   
+$ systemctl enable bro  
+$ systemctl start bro   
+</code></pre>
+
+<h3 id="3-整合elastic-stack-kafka-和bro">3.整合Elastic Stack，[Kafka]和Bro</h3>
+
+<h4 id="3-1-bro日志101">3.1 Bro日志101</h4>
+
+<pre><code>conn.log -- IP, TCP, UDP, ICMP
+dhcp.log -- DHCP
+dns.log -- DNS查询/响应
+ftp.log -- FTP请求/响应
+http.log -- HTTP请求/响应
+files.log -- 文件还原
+mysql.log -- MySQL
+irc.log -- IRC
+radius.log -- RADIUS认证
+kerberos.log -- Kerberos认证
+sip.log -- SIP协议
+smtp.log -- SMTP事务
+ssl.log -- SSL握手
+ssh.log -- SSH握手
+syslog.log -- Syslog消息
+tunnel.log -- 封装隧道的细节
+
+Microsoft相关的日志
+dce_rpc.log -- DCE/RPC消息
+ntlm.log -- NTLM
+rdp.log -- 远程桌面 (RDP)
+smb_files.log -- SMB文件传输
+smb_mapping.log -- SMB管道
+
+# 详细解释：https://github.com/corelight/bro-cheatsheets
+</code></pre>
+
+<h4 id="3-2-使用elastic-stack直接处理bro的csv格式日志">3.2 使用Elastic Stack直接处理Bro的csv格式日志</h4>
+
+<pre><code># 注意事项
+1.端口开放（--&gt; 防火墙）：
+    elasticsearch:9200
+    Logstash:5044
+    Kibana:5061
+2.&quot;index =&gt; &quot;bro_logs-%{+YYYY.MM.dd}&quot;&quot;,其中index名称必须小写
+3.创建Index Patterns前必须有对应Bro的日志，否则会导致Field不全
+
+# 软件环境
+Elastic Stack 6.4
+bro version 2.5.4
+
+# 方式一：使用Filebeat处理Bro日志，
+数据流：
+Bro --&gt; Filebeat --&gt; ELK(Logstash)
+
+1.安装Filebeat
+
+Ubuntu 16.04：
+$ wget https://github.com/tianyulab/Threat_Hunting_with_ELK/raw/master/Bro/Install_Filebeat.sh
+$ chmod +x Install_Filebeat.sh &amp;&amp; ./Install_Filebeat.sh
+
+2.配置ELK(Logstash)接收来自FileBeat收集的Bro日志
+# 注意：此命令在ELK主机上执行
+$ wget https://github.com/tianyulab/Threat_Hunting_with_ELK/raw/master/Bro/Deploy_Bro_Filebeat_Logstash.sh
+$ chmod +x Deploy_Bro_Filebeat_Logstash.sh &amp;&amp; ./Deploy_Bro_Filebeat_Logstash.sh
+$ sed -i 's/8.8.8.8/ELK IP/g' Bro_Filebeat_Logstash.conf
+$ systemctl start logstash.service
+
+3.配置Filebeat处理Bro日志
+$ wget https://github.com/tianyulab/Threat_Hunting_with_ELK/raw/master/Bro/Deploy_Filebeat.sh
+$ chmod +x Deploy_Filebeat.sh &amp;&amp; ./Deploy_Filebeat.sh
+$ sed -i 's/8.8.8.8/ELK logstash IP/g' /etc/filebeat/filebeat.yml
+$ service filebeat start
+
+4.访问Kibana web UI：http://localhost:5601，添加&quot;Index Patterns&quot;
+正常情况下，字段(Fields) &gt;= 218
+
+# 方式二：使用Logstash处理Bro日志，
+数据流：
+Bro --&gt; Logstash --&gt; ELK(Elasticsearch)
+
+1.安装Logstash
+
+Ubuntu 16.04：
+$ wget https://github.com/tianyulab/Threat_Hunting_with_ELK/raw/master/Bro/Install_Logstash.sh
+$ chmod +x Install_Logstash.sh &amp;&amp; ./Install_Logstash.sh
+
+2.配置Logstash处理Bro日志
+
+# 注意：如ELK和Bro不在同一台服务器上，需要修改配置文件中elasticsearch的值，如： hosts =&gt; [&quot;ELK IP:9200&quot;]
+# sed -i 's/localhost/ELK IP/g' bro*.conf
+
+$ cd /etc/logstash/conf.d
+$ wget https://github.com/tianyulab/Threat_Hunting_with_ELK/raw/master/Bro/Deploy_Logstash.sh
+$ chmod +x Deploy_Logstash.sh &amp;&amp; ./Deploy_Logstash.sh
+$ rm -f Deploy_Logstash.sh
+
+3.访问Kibana web UI：http://localhost:5601，添加“Index Patterns”
+
+# 调试&amp;排错
+## Logstash
+$ mkdir -p /root/xxx/logs &amp;&amp; cd /root/xxx
+$ /usr/share/logstash/bin/logstash -f xxx.conf --path.logs /root/xxx/logs --log.level=debug --config.debug --config.test_and_exit                                                                                   
+$ /usr/share/logstash/bin/logstash -f nmap-logstash.conf --path.logs /root/xxx/logs/ --log.level=debug --config.debug 2&gt;&amp;1 | tee /root/xxx/logs/101
+## FileBeat
+$ filebeat -e -d &quot;*&quot; -c /etc/filebeat/filebeat.yml
+
+# 容器化ELK项目对应配置（https://github.com/Zer0d0y/docker-elk）
+1.docker-elk/docker-compose.yml
+  logstash:
+    ports:
+      - &quot;5044:5044&quot;
+2.docker-elk/logstash/pipeline/bro_logs.conf
+3.docker-compose build
+</code></pre>
+
+<h4 id="3-3-使用elastic-stack-kafka处理bro的json格式日志">3.3 使用Elastic Stack + Kafka处理Bro的json格式日志</h4>
+
+<pre><code>数据流：
+Bro --&gt; Kafka --&gt; Logstash --&gt; ELK(Elasticsearch)
+</code></pre>
+
+<h5 id="3-3-1-安装kafka">3.3.1 安装Kafka</h5>
+
+<pre><code># 软件环境：
+# Ubuntu 16.04
+# Elastic Stack 6.4
+# Bro 2.5.5
+# Kafka 2.12
+# librdkafka-0.9.4
+
+# 1.安装Kafka
+# 创建临时目录
+mkdir /src &amp;&amp; cd /src
+
+# 下载&amp;验证kafka
+wget https://archive.apache.org/dist/kafka/1.0.0/kafka_2.12-1.0.0.tgz
+wget https://archive.apache.org/dist/kafka/1.0.0/kafka_2.12-1.0.0.tgz.asc
+gpg --recv-keys  3B417B9B 
+gpg -v kafka_2.12-1.0.0.tgz.asc
+
+# 安装&amp;启动kafka服务
+tar -xf kafka_2.12-1.0.0.tgz
+sudo mv kafka_2.12-1.0.0 /opt/kafka
+sudo sed -i '/^log.dirs/{s/=.*//;}' /opt/kafka/config/server.properties
+sudo sed -i 's/^log.dirs/log.dirs=\/var\/lib\/kafka/' /opt/kafka/config/server.properties
+sudo sed -i '$alisteners=bro://BRO所在机器的IP地址:9092' /opt/kafka/config/server.properties 
+
+cat &gt; /etc/systemd/system/kafka.service &lt;&lt; EOF
+[Unit]
+Description=Kafka Service
+Wants=network.target
+After=zookeeper.target
+
+[Service]
+ExecStart=/opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/server.properties
+ExecReload=on-failure
+Restart=always
+User=root
+Group=root
+StandardOutput=syslog
+StandardError=syslog
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# 
+sudo apt-get -y install zookeeperd
+sudo systemctl enable zookeeper 
+sudo systemctl start zookeeper
+sudo systemctl daemon-reload
+sudo systemctl enable kafka 
+sudo systemctl start kafka
+</code></pre>
+
+<h5 id="3-3-2-安装kafka插件-metron-bro-plugin-kafka">3.3.2 安装kafka插件（metron-bro-plugin-kafka）</h5>
+
+<pre><code># 更新
+bro-pkg install apache/metron-bro-plugin-kafka
+http://mailman.icsi.berkeley.edu/pipermail/bro/2018-October/013654.html
+
+## 安装librdkafka
+curl -L https://github.com/edenhill/librdkafka/archive/v0.9.4.tar.gz | tar xvz 
+cd librdkafka-0.9.4/ 
+./configure --enable-sasl 
+make 
+sudo make install 
+## 构建插件
+### 先安装Bro 2.5.5
+cd /src
+wget https://github.com/tianyulab/Threat_Hunting_with_ELK/raw/master/Bro/Install_Bro_from_source.sh
+chmod +x Install_Bro_from_source.sh &amp;&amp; ./Install_Bro_from_source.sh
+
+git clone https://github.com/apache/metron-bro-plugin-kafka.git
+cd metron-bro-plugin-kafka
+./configure --bro-dist=/src/bro-2.5.5/
+make 
+sudo make install
+## 验证
+/usr/local/bro/bin/bro -N Apache::Kafka
+
+</code></pre>
+
+<h5 id="3-3-3-配置bro把日志发送到kafka">3.3.3 配置Bro把日志发送到Kafka</h5>
+
+<pre><code>$ vi /usr/local/bro/share/bro/site/local.bro
+
+@load /usr/local/bro/lib/bro/plugins/APACHE_KAFKA/scripts/Apache/Kafka/logs-to-kafka.bro
+redef Kafka::topic_name = &quot;&quot;;
+redef Kafka::logs_to_send = set(Conn::LOG, HTTP::LOG, DNS::LOG, SMTP::LOG, SSL::LOG, Software::LOG, DHCP::LOG, FTP::LOG, IRC::LOG, Notice::LOG, X509::LOG, SSH::LOG, SNMP::LOG);
+redef Kafka::kafka_conf = table([&quot;metadata.broker.list&quot;] = &quot;BRO所在机器的IP地址:9092&quot;);
+redef Kafka::tag_json = T;
+</code></pre>
+
+<h5 id="3-3-4-配置logstash接收kafka日志">3.3.4 配置Logstash接收Kafka日志</h5>
+
+<pre><code>## 先安装Logstash
+$ wget https://github.com/tianyulab/Threat_Hunting_with_ELK/raw/master/Bro/Install_Logstash.sh
+$ chmod +x Install_Logstash.sh &amp;&amp; ./Install_Logstash.sh
+$ echo config.reload.automatic: true |sudo tee -a /etc/logstash/logstash.yml
+$ echo config.reload.interval: 3s |sudo tee -a /etc/logstash/logstash.yml
+# 以Bro conn日志为例：
+$ cat &gt; /etc/logstash/conf.d/bro-conn.conf &lt;&lt; EOF
+input {
+	kafka {
+		topics =&gt; [&quot;conn&quot;]
+		group_id =&gt; &quot;bro_logstash&quot;
+     		bootstrap_servers =&gt; &quot;10.42.94.92:9092&quot;
+     		codec =&gt; json
+     		type =&gt; &quot;conn&quot;
+     		auto_offset_reset =&gt; &quot;earliest&quot;
+	}
+}
+
+output {
+	if [type] == &quot;conn&quot; {
+		elasticsearch {
+			hosts =&gt; [&quot;192.168.8.112:9200&quot;]
+			index =&gt; &quot;bro-conn-%{+YYYY.MM.dd}&quot;
+		}
+	}
+}
+EOF
+</code></pre>
+
+<h5 id="3-3-5-一键部署脚本">3.3.5 一键部署脚本</h5>
+
+<pre><code>$ wget https://github.com/tianyulab/Threat_Hunting_with_ELK/raw/master/Bro/Deploy_Kafka_for_Bro.sh
+# 修改10.42.94.92 --&gt; 为Kafka监听IP
+$ sed -i 's/10.42.94.92/Kafka监听IP/g' Deploy_Kafka_for_Bro.sh
+# 修改192.168.8.112 --&gt; 为Elasticsearch监听IP
+$ sed -i 's/192.168.8.112/Elasticsearch监听IP/g' Deploy_Kafka_for_Bro.sh
+# 修改&quot;BRO所在机器的IP地址&quot;为BRO所在机器的IP地址
+$ sed -i 's/BRO所在机器的IP地址/BRO所在机器的IP地址/g' Deploy_Kafka_for_Bro.sh
+$ sh -x Deploy_Kafka_for_Bro.sh
+
+# 验证
+$ sudo systemctl status zookeeper
+$ sudo systemctl status kafka
+$ systemctl status logstash
+$ /usr/local/bro/bin/bro -N Apache::Kafka
+$ /usr/local/bro/bin/broctl status
+$ netstat -tunlp  | grep -E '2181|9092|9600'
+
+# 安装过程排错
+$ watch tail log.out
+$ cat log.out | grep error
+$ cat log.out | grep -B 10 &quot;Configuring incomplete, errors occurred&quot;
+$ cat log.out | grep -i &quot;cd librdkafka-0.9.4&quot; -A 50 | more
+
+# Kafka 排错
+$ apt-get install kafkacat
+$ kafkacat -b 192.168.8.115:9092 -t http -o end # &quot;http&quot;为Bro的kafka插件定义的&quot;topics&quot;
+或
+$ /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server 192.168.8.115:9092 --topic http
+
+# Kibana 创建index
+bro-conn-*
+bro-dns-*
+... ...
+然后创建
+bro-*
+</code></pre>
+
+
+<figure >
+    
+        <img src="images/ty-practical-guide-to-threat-hunting-01-img03.jpeg" />
+    
+    
+</figure>
+
+
+<p><strong>致谢：</strong></p>
+
+<p>@HardenedLinux 团队</p>
+
+<p>@Rock NSM团队</p>
+
+<p>@Security Onion团队</p>
+
+<p><a href="https://mp.weixin.qq.com/s?__biz=MzU0MzgyMzM2Nw==&amp;mid=2247483724&amp;idx=1&amp;sn=40ca6e7c577f0bbac2cc6424ee61ce00&amp;chksm=fb04c224cc734b32a1d3ed27209a8a279159ca46fb51575dda1828f00c391f3b58920b581c50&amp;scene=0#rd 微信公众号链接"><strong>微信公众号：威胁猎杀实战（一）：平台</strong></a></p>
+
+                      
+<div class="bdsharebuttonbox">
+<a href="#" class="bds_more" data-cmd="more"></a>
+<a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>
+<a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+<a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+<a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a>
+<a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a>
+</div>
+
+<script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":["mshare","qzone","tsina","weixin","douban","sqq","youdao","fbook","twi","linkedin","evernotecn","copy"],"bdPic":"","bdStyle":"1","bdSize":"32"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='/static/api/js/share.js'];</script>
+
+<div id="disqus_thread"></div>
+<script type="text/javascript">
+
+(function() {
+    
+    
+    if (window.location.hostname == "localhost")
+        return;
+
+    var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+    var disqus_shortname = 'zer0d0y';
+    dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com/" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+                    </div>
+                    <div style="border: 1px dashed #e0e0e0; padding: 10px 10px 10px 10px; background-color: #fffeee; background-repeat: no-repeat; background-attachment: scroll; background-position: 1% 50%; -moz-background-size: auto auto; -moz-background-clip: -moz-initial; -moz-background-origin: -moz-initial; -moz-background-inline-policy: -moz-initial;">
+                        <div style="float:left;margin-top:0px;">
+                        <img src="https://blog.tianyulab.com/public/qrcode.jpg" width="129px" height="129px"/>
+                        <div style="text-align:center;"></div>
+                        </div>
+                        <div>
+                            <p style="margin-top:0px;">作者：<a target="_blank" href="http://www.Zer0d0y.info/">Zer0d0y</a>
+                            <br />微信关注：Zer0d0y
+                            <br />本文出处：<a target="_blank" href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-01/">https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-01/</a>
+                            <br />
+                            本站评论使用Disqus，如果长时间无法加载，请切换至“自由”互联网。
+                            <br />文章版权归本人所有，欢迎转载，但未经作者同意必须保留此段声明，且在文章页面明显位置给出原文连接，否则保留追究法律责任的权利。 </p>
+                        </div>
+                    </div>
+                    <div class="clear"></div>
+                  </div>
+                  
+
+                </div>
+                
+              </article>
+              
+              <div class="clear"></div>
+              
+              
+              
+            </div>
+          </section>
+          <div class="sidebar s1">
+  <a class="sidebar-toggle" title="Expand Sidebar"><i class="fa icon-sidebar-toggle"></i></a>
+  <div class="sidebar-content">
+    <div class="sidebar-top group">
+      <p>Follow:</p>
+      <ul class="social-links">
+    <li>
+    <a class="social-tooltip" title="微博"
+        href="http://weibo.com/Zer0d0y1" target="_blank">
+        <i class="fa fa-weibo"></i>
+    </a>
+    </li>
+    <li>
+    <a class="social-tooltip" title="Twitter" rel="nofollow"
+        href="https://twitter.com/Zer0d0y" target="_blank">
+        <i class="fa fa-twitter"></i>
+    </a>
+    </li>
+    <li>
+    <a class="social-tooltip" title="GitHub"
+        href="https://github.com/tianyulab" target="_blank">
+        <i class="fa fa-github"></i>
+    </a>
+    </li>
+</ul>
+
+    </div>
+    <div class="widget qrcode">
+    <img src="https://blog.tianyulab.com/public/qrcode.jpg" alt="qrcode" width="172px" height="172px"/>
+    <p> 天御实验室<br/> 威胁感知、威胁猎杀 <br /></p>
+</div>
+
+    <ul class="post-nav group">
+      <li class="next">
+        
+        <a href="https://blog.tianyulab.com/categories/" rel="next">
+          <i class="fa fa-chevron-right"></i>
+          <strong>Next post</strong>
+          <span>Categories</span>
+        </a>
+        
+      </li>
+      <li class="previous">
+        
+      </li>
+    </ul>
+    <div id="search-2" class="widget widget_search"><h3>Search</h3>
+      <form method="get" class="searchform themeform" action="https://www.google.com/search">
+        <div>
+          <input type="text" class="search" name="q" placeholder="Press enter to start searching">
+        </div>
+      </form>
+    </div>
+  </div>
+  
+</div>
+
+          <div class="sidebar s2">
+  <a class="sidebar-toggle" title="Expand Sidebar"><i class="fa icon-sidebar-toggle"></i></a>
+  <div class="sidebar-content">
+    <div class="sidebar-top group">
+      <p>More</p>
+    </div>
+    <div id="categories-2" class="widget widget_categories"><h3>Categories</h3>
+      <ul>
+        
+          <li class="cat-item cat-item-1">
+            <a rel="nofollow" href="https://blog.tianyulab.com/categories/%E5%A8%81%E8%83%81%E6%84%9F%E7%9F%A5/">威胁感知</a>
+          </li>
+        
+          <li class="cat-item cat-item-1">
+            <a rel="nofollow" href="https://blog.tianyulab.com/categories/%E5%A8%81%E8%83%81%E6%A3%80%E6%B5%8B/">威胁检测</a>
+          </li>
+        
+          <li class="cat-item cat-item-1">
+            <a rel="nofollow" href="https://blog.tianyulab.com/categories/%E5%A8%81%E8%83%81%E7%8C%8E%E6%9D%80/">威胁猎杀</a>
+          </li>
+        
+          <li class="cat-item cat-item-1">
+            <a rel="nofollow" href="https://blog.tianyulab.com/categories/Misc/">Misc</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  <footer id="footer">
+  <section class="container" id="footer-bottom">
+    <div class="container-inner">
+      <a id="back-to-top" href="#"><i class="fa fa-angle-up"></i></a>
+      <div class="pad group">
+        <div class="grid one-half">
+          <div id="copyright">
+            <p>Copyright © 2018. All Rights Reserved. <br>Powered by
+              <a rel="nofollow" href="http://gohugo.io/" target="_blank">Hugo - Static Site Generator</a>.
+            </p>
+          </div>
+          
+        </div>
+        
+        <div class="grid one-half last">
+          <ul class="social-links">
+    <li>
+    <a class="social-tooltip" title="微博"
+        href="http://weibo.com/Zer0d0y1" target="_blank">
+        <i class="fa fa-weibo"></i>
+    </a>
+    </li>
+    <li>
+    <a class="social-tooltip" title="Twitter" rel="nofollow"
+        href="https://twitter.com/Zer0d0y" target="_blank">
+        <i class="fa fa-twitter"></i>
+    </a>
+    </li>
+    <li>
+    <a class="social-tooltip" title="GitHub"
+        href="https://github.com/tianyulab" target="_blank">
+        <i class="fa fa-github"></i>
+    </a>
+    </li>
+</ul>
+
+        </div>
+      </div>
+
+    </div>
+    
+  </section>
+  
+</footer>
+
+</div>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-10147768-2', 'auto');
+  ga('send', 'pageview');
+
+  $('#messagesbsb').remove();
+
+</script>
+</body>
+</html>
+
