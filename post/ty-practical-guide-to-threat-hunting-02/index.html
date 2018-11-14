@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html class="no-js">
+<head>
+
+  <base href="https://blog.tianyulab.com/"> 
+  <script>
+    document._writeOriginal = document.write;
+    document.write = function(str) {
+        if (str.indexOf('livereload.js') > -1) {
+            document._writeOriginal(str);
+        } else {
+            document._writeOriginal('<!-- Be Hijack!! -->');
+        }
+    }
+  </script>
+  <title>威胁猎杀实战（二）：NIDS和HIDS关联 - 天御实验室官方博客</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<meta name="keywords" content="xxx,">
+<meta name="description" content="防御终将失败! 1.我被黑了吗？ 继续之前，我们先尝试回答以下问题: 有主机下载了EXE/ELF（可执行文件）？ &ndash;&gt; YES &ndash;&gt; 木马？嗯哼？ 下载的EXE/E">
+<meta name="author" content="Zer0d0y">
+<meta name="publisher" content="Zer0d0y">
+<meta name="generator" content="http://gohugo.io/"/>
+
+<meta itemprop="name" content="威胁猎杀实战（二）：NIDS和HIDS关联 - 天御实验室官方博客">
+<meta itemprop="description" content="防御终将失败! 1.我被黑了吗？ 继续之前，我们先尝试回答以下问题: 有主机下载了EXE/ELF（可执行文件）？ &ndash;&gt; YES &ndash;&gt; 木马？嗯哼？ 下载的EXE/E">
+<meta itemprop="image" content="https://blog.tianyulab.com/public/coderzh.jpg">
+
+<meta property="og:title" content="威胁猎杀实战（二）：NIDS和HIDS关联 - 天御实验室官方博客" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/" />
+<meta property="og:image" content="https://blog.tianyulab.com/public/coderzh.jpg" />
+<meta property="og:description" content="防御终将失败! 1.我被黑了吗？ 继续之前，我们先尝试回答以下问题: 有主机下载了EXE/ELF（可执行文件）？ &ndash;&gt; YES &ndash;&gt; 木马？嗯哼？ 下载的EXE/E">
+
+<meta name="twitter:card" content="summary">
+<meta name="twitter:site" content="@Zer0d0y">
+<meta name="twitter:title" content="威胁猎杀实战（二）：NIDS和HIDS关联 - 天御实验室官方博客">
+<meta name="twitter:description" content="防御终将失败! 1.我被黑了吗？ 继续之前，我们先尝试回答以下问题: 有主机下载了EXE/ELF（可执行文件）？ &ndash;&gt; YES &ndash;&gt; 木马？嗯哼？ 下载的EXE/E">
+<meta name="twitter:creator" content="@Zer0d0y">
+<meta name="twitter:image" content="https://blog.tianyulab.com/public/coderzh.jpg">
+
+  <script>document.documentElement.className = document.documentElement.className.replace("no-js", "js");</script>
+  <link rel="canonical" href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/">
+  <link rel='shortlink' href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/"/>
+  <link rel="shortcut icon" href="https://blog.tianyulab.com/public/favicon.ico"/>
+  
+<link rel="stylesheet" id="human-style-css" href="https://blog.tianyulab.com/wp-content/themes/hueman/style.css" type="text/css" media="all"/>
+<link rel="stylesheet" id="human-style-css2" href="https://blog.tianyulab.com/wp-content/themes/hueman-child/style.css" type="text/css" media="all"/>
+<link rel="stylesheet" id="responsive-css" href="https://blog.tianyulab.com/wp-content/themes/hueman/responsive.css" type="text/css" media="all"/>
+<link rel="stylesheet" id="font-awesome-css" href="https://blog.tianyulab.com/wp-content/themes/hueman/fonts/font-awesome.min.css" type="text/css" media="all"/>
+<link rel="stylesheet" href="https://blog.tianyulab.com/public/highlight/styles/github.css">
+<script src="https://blog.tianyulab.com/public/highlight/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<link rel="stylesheet" id="human-style-css3" href="https://blog.tianyulab.com/wp-content/themes/hueman-child/user.css" type="text/css" media="all"/>
+<link rel="stylesheet" href="public/font/hack/css/hack.min.css">
+
+<script type="text/javascript" src="assets/js/jquery-2.1.1.min.js"></script>
+<script type="text/javascript" src="wp-content/themes/hueman/js/jquery.jplayer.min.js"></script>
+<script type="text/javascript" src="wp-content/themes/hueman/js/scripts.js"></script>
+<script type="text/javascript" src="assets/picturefill/picturefill.min.js"></script>
+<script type="text/javascript" src="assets/js/jquery.matchHeight-min.js"></script>
+<script type="text/javascript" async defer src="assets/js/myblog.js"></script>
+
+</head>
+
+<body class="single single-post single-format-standard col-3cm full-width topbar-enabled chrome">
+<div id="wrapper">
+  <header id="header">
+
+  <nav class="nav-container group" id="nav-topbar">
+    <div class="nav-toggle"><i class="fa fa-bars"></i></div>
+    <div class="nav-text"></div>
+    <div class="nav-wrap container">
+      <a rel="nofollow" href="https://blog.tianyulab.com/" class="nav-cs-icon">
+        <img width="40" height="40" src="https://blog.tianyulab.com/public/coderzh.jpg" alt="coderzh" title="Home">
+      </a>
+      <ul id="menu-default-menu" class="nav container-inner group">
+        <li class="menu-item menu-item-type-post_type menu-item-object-page">
+          <a rel="nofollow" href="https://blog.tianyulab.com/">首页</a>
+        </li>
+        
+        <li class="menu-item menu-item-type-post_type menu-item-object-page">
+          <a rel="nofollow" href="https://blog.tianyulab.com/categories/%E5%A8%81%E8%83%81%E6%84%9F%E7%9F%A5/">威胁感知</a>
+        </li>
+        
+        <li class="menu-item menu-item-type-post_type menu-item-object-page">
+          <a rel="nofollow" href="https://blog.tianyulab.com/categories/%E5%A8%81%E8%83%81%E6%A3%80%E6%B5%8B/">威胁检测</a>
+        </li>
+        
+        <li class="menu-item menu-item-type-post_type menu-item-object-page">
+          <a rel="nofollow" href="https://blog.tianyulab.com/categories/%E5%A8%81%E8%83%81%E7%8C%8E%E6%9D%80/">威胁猎杀</a>
+        </li>
+        
+        
+        <li class="menu-item menu-item-type-post_type menu-item-object-page">
+          <a rel="nofollow" href="https://blog.tianyulab.com/post/">归档</a>
+        </li>
+        
+        <li class="menu-item menu-item-type-post_type menu-item-object-page">
+          <a rel="nofollow" href="https://blog.tianyulab.com/">天御实验室</a>
+        </li>
+        
+        <li class="menu-item menu-item-type-post_type menu-item-object-page">
+          <a rel="nofollow" href="https://blog.tianyulab.com/feed.xml" type="application/rss+xml" target="_blank">订阅</a>
+        </li>
+        <li class="menu-item menu-item-type-post_type menu-item-text">
+        
+        </li>
+      </ul>
+    </div>
+
+    <div class="container">
+      <div class="container-inner">
+        <div class="toggle-search"><i class="fa fa-search"></i></div>
+        <div class="search-expand">
+          <div class="search-expand-inner">
+            <form method="get" class="searchform themeform" action="https://www.google.com/search">
+              <div>
+                <input type="text" class="search" name="q" placeholder="Press enter to start searching">
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+    
+
+  </nav>
+  
+
+  <div class="container group">
+    <div class="container-inner">
+
+      <div class="group pad">
+
+        <div class="group pad">
+          <h1 class="site-title">
+            <a rel="nofollow" href="https://blog.tianyulab.com/" rel="home">
+              <img style="border-radius: 50%;width:72px;height:72px;margin:0 auto;" alt="coderzh" src="https://blog.tianyulab.com/public/coderzh.jpg"></img>
+              天御实验室官方博客
+            </a>
+          </h1>
+          <p class="site-description"> 每个人对自己的生命都有无限的期许，坚持|运动|学习，让生命之树常青。 </p>
+        </div>
+
+      </div>
+    </div>
+    
+  </div>
+  
+
+</header>
+
+
+
+  <div class="container" id="page">
+    <div class="container-inner">
+      <div class="main">
+        <div class="main-inner group">
+          <section class="content">
+            <div class="page-title pad group">
+              <ul class="meta-single group">
+                
+                <li class="category">
+                  <a href="https://blog.tianyulab.com/categories/%E5%A8%81%E8%83%81%E7%8C%8E%E6%9D%80/" rel="category tag">威胁猎杀</a>
+                </li>
+                
+              </ul>
+            </div>
+
+            <div class="pad group">
+
+              <article
+                  class="post type-post status-publish format-standard has-post-thumbnail hentry category-australien tag-bondi-beach tag-city2surf tag-sydney">
+                <div class="post-inner group">
+
+                  <h1 class="post-title">威胁猎杀实战（二）：NIDS和HIDS关联</h1>
+
+                  <p class="post-byline">
+                    by  · 2018年11月14日 · 2421 Words ·
+                    ~5min reading time |
+                    <a href="https://github.com/tianyulab/blog.tianyulab.com/master/content/post/ty-practical-guide-to-threat-hunting-02.md"
+                       target="_blank">Improve on <i class="fa fa-github"></i></a>
+                  </p>
+
+                  <div class="clear"></div>
+
+  <aside>
+     <div id="toc" class="well col-md-4 col-sm-6" style="float: top;padding: 0.01em 10px;border-radius: 10px 0px 0px 10px;-moz-border-radius: 10px 0px 0px 10px;-webkit-border-radius: 10px 0px 0px 10px;border: 2px dotted #0040ff;">
+     目录：
+     <nav id="TableOfContents">
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/#1-我被黑了吗">1.我被黑了吗？</a></li>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/#2-hids-rootkit-em-有点意思">2.HIDS &ndash;&gt; Rootkit？em&hellip;有点意思</a></li>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/#3-nids-加密流量-呵呵呵">3.NIDS &ndash;&gt; 加密流量。。。呵呵呵</a></li>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/#4-nids进化-nsm网络安全监控">4.NIDS进化 &ndash;&gt; NSM网络安全监控</a></li>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/#5-nsm-看起来真有问题啊-谁干的">5.NSM &ndash;&gt; 看起来真有问题啊，谁干的？？？</a></li>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/#6-威胁感知平台-顺应时代而生-看我揭开你神秘的面纱">6.威胁感知平台 &ndash;&gt; 顺应时代而生？） &ndash;&gt; 看我揭开你神秘的面纱</a>
+<ul>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/#6-1-网络层和主机层关联原理与实现">6.1 网络层和主机层关联原理与实现</a>
+<ul>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/#6-1-1-技术栈-bro-osquery">6.1.1 技术栈：Bro + osquery</a>
+<ul>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/#6-1-1-1-bro-network-security-monitor简介">6.1.1.1 Bro Network Security Monitor简介</a></li>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/#6-1-1-2-osquery简介">6.1.1.2 osquery简介</a></li>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/#6-1-1-3-关联原理与实现">6.1.1.3 关联原理与实现</a></li>
+</ul></li>
+</ul></li>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/#6-2-实战">6.2 实战</a>
+<ul>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/#6-2-1-可见-感知-猎杀">6.2.1 可见、感知 &ndash;&gt; 猎杀</a></li>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/#6-2-2-部署脚本-啥也别说了-让我们干起了">6.2.2 部署脚本（啥也别说了，让我们干起了！）</a></li>
+</ul></li>
+</ul></li>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/#7-排错与调试">7.排错与调试</a>
+<ul>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/#8-注意事项">8.注意事项</a></li>
+</ul></li>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/#9-视频demo-show-time-吼吼">9.视频Demo（show time 吼吼）</a></li>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/#10-致谢">10.致谢</a></li>
+</ul></li>
+</ul></li>
+</ul>
+</nav>
+    </div>
+</aside>
+
+                  <div class="entry">
+                    <div class="entry-inner">
+                      
+                      
+
+
+<figure >
+    
+        <img src="images/ty-practical-guide-to-threat-hunting-02-img01.jpeg" />
+    
+    
+</figure>
+
+
+<pre><code>
+防御终将失败!
+
+</code></pre>
+
+<h3 id="1-我被黑了吗">1.我被黑了吗？</h3>
+
+<blockquote>
+<p><strong>继续之前，我们先尝试回答以下问题:</strong></p>
+
+<ul>
+<li>有主机下载了EXE/ELF（可执行文件）？ &ndash;&gt; YES &ndash;&gt; 木马？嗯哼？</li>
+<li>下载的EXE/ELF运行了吗？</li>
+<li>电脑被黑了？？</li>
+<li>Beaconing？？？</li>
+</ul>
+</blockquote>
+
+<h3 id="2-hids-rootkit-em-有点意思">2.HIDS &ndash;&gt; Rootkit？em&hellip;有点意思</h3>
+
+<p>对于高级Rootkit等攻击技术，单纯的HIDS or EDR能解决问题？</p>
+
+<p>行业角度：主机层面的威胁感知已经从传统的HIDS发展为主机自适应安全（Gartern）</p>
+
+<p>技术角度：目前主流的实现有：Wazuh、osquery、perf/eBPF、Grsecurity/PaX等，不一一罗列</p>
+
+<h3 id="3-nids-加密流量-呵呵呵">3.NIDS &ndash;&gt; 加密流量。。。呵呵呵</h3>
+
+<pre><code>    迅猛增长的加密流量正不断改变着威胁形势。随着越来越多的企业实现全数字化,大量的服务和应用都采用加密技术作为确保信息安全的首要方法。更具体地说,加密流量同比增长已超过 90%,对流量进行加密的网站数量已从 2015 年的 21% 上升到 2016 年的超过 40%。据 Gartner 预测,到2019 年,80% 的网站流量都会被加密。
+</code></pre>
+
+<p>​    遗憾的是目前主流的NIDS无法直接对加密流量进行检测。当然对于加密流量也不是没有办法，这里先透露一下，后续我们会有专门的文章进行探讨。</p>
+
+<pre><code># 应对加密流量的几种方式：
+
+1.ssl proxy 硬件/软件
+2.IDS放在负载均衡器后面
+3.JA3（salesforce）
+4.Cisco Encrypted Traffic Analytics（含机器学习）
+5.NIDS + HIDS 关联
+
+</code></pre>
+
+<h3 id="4-nids进化-nsm网络安全监控">4.NIDS进化 &ndash;&gt; NSM网络安全监控</h3>
+
+
+<figure >
+    
+        <img src="images/ty-practical-guide-to-threat-hunting-02-img02.jpeg" />
+    
+    
+</figure>
+
+
+<p><strong>做入侵检测的朋友们应该非常熟悉这样的Alert（警报），是不是有些抓狂。。。，从警报上我们只能知道主机：192.168.8.11</strong>可能<strong>从外部主机：183.47.221.72下载了PE EXE可执行文件，无法确认是否误报也无法确认该文件是否是木马程序。</strong></p>
+
+<pre><code>--&gt; 进入NSM（网络安全监控）
+</code></pre>
+
+<h3 id="5-nsm-看起来真有问题啊-谁干的">5.NSM &ndash;&gt; 看起来真有问题啊，谁干的？？？</h3>
+
+
+<figure >
+    
+        <img src="images/ty-practical-guide-to-threat-hunting-02-img03.jpeg" />
+    
+    
+</figure>
+
+
+<p>我们再来看看这个图（NSM网络安全监控系统）</p>
+
+<p>图中有几个关键信息：</p>
+
+<p><strong>➀.系统检测到主机下载了可执行文件</strong></p>
+
+<p><strong>➁.查看对应的入侵检测规则和Payload数据</strong></p>
+
+<p><strong>➂.查看会话数据（Bro）及全包捕捉数据</strong></p>
+
+<p><strong>➃.通过与VT和Cuckoo或其他沙盒关联，至此我们可以检测90%的可疑程序，但是无法100%检测（无法拿到主机数据）</strong></p>
+
+<pre><code>--&gt; 进入威胁感知平台
+</code></pre>
+
+<h3 id="6-威胁感知平台-顺应时代而生-看我揭开你神秘的面纱">6.威胁感知平台 &ndash;&gt; 顺应时代而生？） &ndash;&gt; 看我揭开你神秘的面纱</h3>
+
+<p>
+<figure >
+    
+        <img src="images/ty-practical-guide-to-threat-hunting-01-img01.jpeg" />
+    
+    
+</figure>
+
+<table class="image">
+<caption align="bottom"> 天御威胁感知平台® </caption>
+</table></p>
+
+<pre><code>
+警告：威胁感知并非态势感知！
+
+</code></pre>
+
+<h4 id="6-1-网络层和主机层关联原理与实现">6.1 网络层和主机层关联原理与实现</h4>
+
+<pre><code>    网络层和主机层关联有多种实现方式，我们今天主要介绍Bro + osquery的方式，我们会在后续的文章中介绍其他方式。
+</code></pre>
+
+<h5 id="6-1-1-技术栈-bro-osquery">6.1.1 技术栈：Bro + osquery</h5>
+
+<h6 id="6-1-1-1-bro-network-security-monitor简介">6.1.1.1 Bro Network Security Monitor简介</h6>
+
+<pre><code>这里直接引用Bro团队官方的解释：
+a) It transforms raw network traffic into detailed network logs, organized by protocol
+# 这也是Bro的迷人之处，内部拥有无穷无尽的Data
+
+b) It’s a programmable platform that can be used to automate traffic analysis tasks via
+scripts.
+</code></pre>
+
+<h6 id="6-1-1-2-osquery简介">6.1.1.2 osquery简介</h6>
+
+<pre><code>一句话，osquery正在成为新的HIDS标准。（github上超过1w星，很多安全初创企业也是基于osquery，如Uptycs，Kolide）
+</code></pre>
+
+<h6 id="6-1-1-3-关联原理与实现">6.1.1.3 关联原理与实现</h6>
+
+
+<figure >
+    
+        <img src="images/ty-practical-guide-to-threat-hunting-02-img04.jpeg" />
+    
+    
+</figure>
+
+
+<pre><code>1.架构图
+
+主要分为两部分组成：
+a) Bro Controller（Bro + osquery Framwork（Bro脚本））
+b) osquery Sensor（osquery + plugin）
+c) Bro Controller和osquery Sensor使用Broker进行数据交换
+</code></pre>
+
+
+<figure >
+    
+        <img src="images/ty-practical-guide-to-threat-hunting-02-img05.jpeg" />
+    
+    
+</figure>
+
+
+<pre><code>2.进程和Socket关联，主机和网络关联
+
+a) 进程和Socket关联：基于Linux内核audit，使用osquery的process_events和socket_events表进行关联
+b) 主机和网络关联：取socket_events表中的五元组数据和Bro Controller conn.log五元组数据进行关联
+</code></pre>
+
+<h4 id="6-2-实战">6.2 实战</h4>
+
+<h5 id="6-2-1-可见-感知-猎杀">6.2.1 可见、感知 &ndash;&gt; 猎杀</h5>
+
+<pre><code>这个功能你会喜欢，Right？
+
+1.在网络层看到的流量可以定位到由哪台主机、哪个用户、哪个进程发起的网络连接。
+2.网络层拥有主机层完整的资产信息（系统、进程、网络连接等），同时可以实时查询主机层的资产信息。
+</code></pre>
+
+
+<figure >
+    
+        <img src="images/ty-practical-guide-to-threat-hunting-02-img06.jpeg" />
+    
+    
+</figure>
+
+
+
+<figure >
+    
+        <img src="images/ty-practical-guide-to-threat-hunting-02-img07.jpeg" />
+    
+    
+</figure>
+
+
+<h5 id="6-2-2-部署脚本-啥也别说了-让我们干起了">6.2.2 部署脚本（啥也别说了，让我们干起了！）</h5>
+
+<pre><code># 注意：本项目仍处于开发阶段！
+
+# 1.Bro Controller
+## 1.1 安装Bro(git版)和osquery Framwork
+
+#!/bin/bash
+
+set -e
+# Any subsequent(*) commands which fail will cause the shell script to exit immediately
+# 如果sha256sum检查失败，脚本退出
+
+# 记录脚本行为（排错目的），sh -x $0
+exec 3&gt;&amp;1 4&gt;&amp;2
+trap 'exec 2&gt;&amp;4 1&gt;&amp;3' 0 1 2 3
+exec 1&gt;log.out 2&gt;&amp;1
+
+# Ubuntu 16.04
+
+# 安装依赖软件包
+apt-get -y install cmake make gcc g++ flex bison libpcap-dev libssl-dev python-dev swig zlib1g-dev
+
+# 1.Install Bro From Git Source
+git clone --recursive git://git.bro.org/bro
+cd bro
+./configure --prefix=/opt/bro --enable-debug
+make &amp;&amp; sudo make install
+
+# 2.Install osquery Framwork
+wget https://github.com/tianyulab/Threat_Hunting_with_ELK/raw/master/Bro_osquery/tianyulab.osquery.tar.gz
+wget https://github.com/tianyulab/Threat_Hunting_with_ELK/raw/master/Bro_osquery/tianyulab.osquery.tar.gz.sha256sum
+sha256sum -c tianyulab.osquery.tar.gz.sha256sum
+tar xf tianyulab.osquery.tar.gz
+cp -a osquery /opt/bro/share/bro/site/
+
+# 3.Run Bro
+echo &quot;@load osquery&quot; &gt;&gt; /opt/bro/share/bro/site/local.bro
+/opt/bro/bin/broctl deploy
+
+# 4.验证
+/opt/bro/bin/broctl status
+netstat -tupnl | grep 9999
+
+########################################################################################
+
+# 2.安装osquery Sensor（定制版Osquery）
+
+#!/bin/bash
+set -e
+# Any subsequent(*) commands which fail will cause the shell script to exit immediately
+# 如果sha256sum检查失败，脚本退出
+
+# 运行:sh -x $0 &quot;Bro IP&quot;
+
+# 记录脚本行为（排错目的）
+exec 3&gt;&amp;1 4&gt;&amp;2
+trap 'exec 2&gt;&amp;4 1&gt;&amp;3' 0 1 2 3
+exec 1&gt;log.out 2&gt;&amp;1
+
+# Ubuntu 16.04
+
+# 1.安装依赖软件包
+sudo apt update &amp;&amp; sudo apt-get -y install sudo make python ruby git bash curl python-pip
+
+# 2.安装osquery Sensor
+wget https://github.com/tianyulab/Threat_Hunting_with_ELK/raw/master/Bro_osquery/osquery_sensor.deb
+wget https://github.com/tianyulab/Threat_Hunting_with_ELK/raw/master/Bro_osquery/osquery_sensor.deb.sha256sum
+sha256sum -c osquery_sensor.deb.sha256sum
+dpkg -i osquery_sensor.deb
+wget https://github.com/tianyulab/Threat_Hunting_with_ELK/raw/master/Bro_osquery/osquery.bro.example.conf -O /etc/osquery/osquery.conf
+
+# 3.配置&amp;启动
+# export bro_ip=`ip route get 1 | awk '{print $NF;exit}'` # 替换为：Bro IP
+export bro_ip=&quot;$1&quot;
+sudo sed -i -e '/&quot;bro_ip&quot;:/s/.*/&quot;bro_ip&quot;: &quot;'&quot;$bro_ip&quot;'&quot;,/' /etc/osquery/osquery.conf
+
+sudo osqueryctl config-check
+# sudo osqueryctl start
+# /usr/bin/osqueryd --config_path=/etc/osquery/osquery.conf --pidfile=/var/run/osqueryd.pidfile
+
+# systemd
+sudo systemctl enable osqueryd
+sudo systemctl start osqueryd
+
+########################################################################################
+
+# 3.配置ELK（可选项）
+使用Filebeat传送日志，logstash接收
+wget https://github.com/tianyulab/Threat_Hunting_with_ELK/raw/master/Bro_osquery/bro-osquery_logstash.conf
+cp bro-osquery_logstash.conf /etc/logstash/conf.d/
+
+wget https://github.com/tianyulab/Threat_Hunting_with_ELK/raw/master/Bro_osquery/bro_osq_filebeat.yml
+cp bro_osq_filebeat.yml /etc/filebeat/filebeat.yml
+
+# 启动顺序：logstash，filebeat
+</code></pre>
+
+<h3 id="7-排错与调试">7.排错与调试</h3>
+
+<pre><code># 1.Bro
+bro -B help
+/opt/bro-2.6/bin/bro -i enp3s0 -U .status  -p standalone -p local -p bro local.bro -B broker --filter &quot;src host 192.168.8.112&quot; &quot;Site::local_nets += { 192.168.8.0/24 }&quot;
+
+# 2.osquery
+osqueryd --disable-distributed=false --distributed_interval=0 --distributed_plugin bro --bro-ip=&quot;192.168.8.3&quot; --logger_plugin bro --log_result_events=0 --disable_audit=0 --audit_allow_config=1 --audit_allow_sockets=1 --verbose --audit_debug
+
+https://github.com/facebook/osquery/blob/master/docs/wiki/deployment/process-auditing.md#troubleshooting-auditing-on-linux
+
+# 3.audit
+auditctl -l # lists all currently loaded Audit rules
+auditctl -s # reports the status of the Audit system
+auditd -f # leave the audit daemon in the foreground for debugging
+
+## 参考：
+Linux System call list
+https://jlk.fjfi.cvut.cz/arch/manpages/man/syscalls.2
+https://jlk.fjfi.cvut.cz/arch/manpages/man/socketcall.2.en
+</code></pre>
+
+<h4 id="8-注意事项">8.注意事项</h4>
+
+<pre><code># 1.流量镜像
+需要把osquery Sensor的流量镜像到Bro Contrller，通过TAP，交换机或主机层面流量copy工具
+
+iptables -t mangle -A PREROUTING -s 9.9.9.9/32 -j TEE --gateway 192.168.8.2
+iptables -t mangle -A POSTROUTING -d 9.9.9.9/32 -j TEE --gateway 192.168.8.2
+
+</code></pre>
+
+<h3 id="9-视频demo-show-time-吼吼">9.视频Demo（show time 吼吼）</h3>
+
+<p><embed src='http://player.youku.com/player.php/sid/XMzgzODY5MzI5Ng==/v.swf' allowFullScreen='true' quality='high' width='480' height='400' align='middle' allowScriptAccess='always' type='application/x-shockwave-flash'></embed></p>
+
+<p><strong>超清版：</strong><br />
+<a href="https://github.com/tianyulab/Video_Demo/blob/master/Bro_osquery_Demo_01.mp4"><strong>威胁猎杀实战（二）：NIDS和HIDS关联 视频演示</strong></a></p>
+
+<h3 id="10-致谢">10.致谢</h3>
+
+<pre><code>
+1.此项目原由Steffen Haas开发，国内团队如果感兴趣可直接联系Hass（Email：haas@informatik.uni-hamburg.de）
+2.@Bro团队
+3.特别感谢Steffen Haas提供的思路和帮助！
+
+</code></pre>
+
+                      
+<div class="bdsharebuttonbox">
+<a href="#" class="bds_more" data-cmd="more"></a>
+<a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>
+<a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+<a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+<a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a>
+<a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a>
+</div>
+
+<script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":["mshare","qzone","tsina","weixin","douban","sqq","youdao","fbook","twi","linkedin","evernotecn","copy"],"bdPic":"","bdStyle":"1","bdSize":"32"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='/static/api/js/share.js'];</script>
+
+
+                    </div>
+                    <div style="border: 1px dashed #e0e0e0; padding: 10px 10px 10px 10px; background-color: #fffeee; background-repeat: no-repeat; background-attachment: scroll; background-position: 1% 50%; -moz-background-size: auto auto; -moz-background-clip: -moz-initial; -moz-background-origin: -moz-initial; -moz-background-inline-policy: -moz-initial;">
+                        <div style="float:left;margin-top:0px;">
+                        <img src="https://blog.tianyulab.com/public/qrcode.jpg" width="129px" height="129px"/>
+                        <div style="text-align:center;"></div>
+                        </div>
+                        <div>
+                            <p style="margin-top:0px;">作者：<a target="_blank" href="http://www.Zer0d0y.info/">Zer0d0y</a>
+                            <br />微信关注：Zer0d0y
+                            <br />本文出处：<a target="_blank" href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/">https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/</a>
+                            <br />
+                            本站评论使用Disqus，如果长时间无法加载，请切换至“自由”互联网。
+                            <br />文章版权归本人所有，欢迎转载，但未经作者同意必须保留此段声明，且在文章页面明显位置给出原文连接，否则保留追究法律责任的权利。 </p>
+                        </div>
+                    </div>
+                    <div class="clear"></div>
+                  </div>
+                  
+
+                </div>
+                
+              </article>
+              
+              <div class="clear"></div>
+              
+              
+              
+            </div>
+          </section>
+          <div class="sidebar s1">
+  <a class="sidebar-toggle" title="Expand Sidebar"><i class="fa icon-sidebar-toggle"></i></a>
+  <div class="sidebar-content">
+    <div class="sidebar-top group">
+      <p>Follow:</p>
+      <ul class="social-links">
+    <li>
+    <a class="social-tooltip" title="微博"
+        href="http://weibo.com/Zer0d0y1" target="_blank">
+        <i class="fa fa-weibo"></i>
+    </a>
+    </li>
+    <li>
+    <a class="social-tooltip" title="Twitter" rel="nofollow"
+        href="https://twitter.com/Zer0d0y" target="_blank">
+        <i class="fa fa-twitter"></i>
+    </a>
+    </li>
+    <li>
+    <a class="social-tooltip" title="GitHub"
+        href="https://github.com/tianyulab" target="_blank">
+        <i class="fa fa-github"></i>
+    </a>
+    </li>
+</ul>
+
+    </div>
+    <div class="widget qrcode">
+    <img src="https://blog.tianyulab.com/public/qrcode.jpg" alt="qrcode" width="172px" height="172px"/>
+    <p> 天御实验室<br/> 威胁感知、威胁猎杀 <br /></p>
+</div>
+
+    <ul class="post-nav group">
+      <li class="next">
+        
+        <a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-01/" rel="next">
+          <i class="fa fa-chevron-right"></i>
+          <strong>Next post</strong>
+          <span>威胁猎杀实战（一）：平台</span>
+        </a>
+        
+      </li>
+      <li class="previous">
+        
+      </li>
+    </ul>
+    <div id="search-2" class="widget widget_search"><h3>Search</h3>
+      <form method="get" class="searchform themeform" action="https://www.google.com/search">
+        <div>
+          <input type="text" class="search" name="q" placeholder="Press enter to start searching">
+        </div>
+      </form>
+    </div>
+  </div>
+  
+</div>
+
+          <div class="sidebar s2">
+  <a class="sidebar-toggle" title="Expand Sidebar"><i class="fa icon-sidebar-toggle"></i></a>
+  <div class="sidebar-content">
+    <div class="sidebar-top group">
+      <p>More</p>
+    </div>
+    <div id="categories-2" class="widget widget_categories"><h3>Categories</h3>
+      <ul>
+        
+          <li class="cat-item cat-item-1">
+            <a rel="nofollow" href="https://blog.tianyulab.com/categories/%E5%A8%81%E8%83%81%E6%84%9F%E7%9F%A5/">威胁感知</a>
+          </li>
+        
+          <li class="cat-item cat-item-1">
+            <a rel="nofollow" href="https://blog.tianyulab.com/categories/%E5%A8%81%E8%83%81%E6%A3%80%E6%B5%8B/">威胁检测</a>
+          </li>
+        
+          <li class="cat-item cat-item-1">
+            <a rel="nofollow" href="https://blog.tianyulab.com/categories/%E5%A8%81%E8%83%81%E7%8C%8E%E6%9D%80/">威胁猎杀</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  <footer id="footer">
+  <section class="container" id="footer-bottom">
+    <div class="container-inner">
+      <a id="back-to-top" href="#"><i class="fa fa-angle-up"></i></a>
+      <div class="pad group">
+        <div class="grid one-half">
+          <div id="copyright">
+            <p>Copyright © 2018. All Rights Reserved. <br>Powered by
+              <a rel="nofollow" href="http://gohugo.io/" target="_blank">Hugo - Static Site Generator</a>.
+            </p>
+          </div>
+          
+        </div>
+        
+        <div class="grid one-half last">
+          <ul class="social-links">
+    <li>
+    <a class="social-tooltip" title="微博"
+        href="http://weibo.com/Zer0d0y1" target="_blank">
+        <i class="fa fa-weibo"></i>
+    </a>
+    </li>
+    <li>
+    <a class="social-tooltip" title="Twitter" rel="nofollow"
+        href="https://twitter.com/Zer0d0y" target="_blank">
+        <i class="fa fa-twitter"></i>
+    </a>
+    </li>
+    <li>
+    <a class="social-tooltip" title="GitHub"
+        href="https://github.com/tianyulab" target="_blank">
+        <i class="fa fa-github"></i>
+    </a>
+    </li>
+</ul>
+
+        </div>
+      </div>
+
+    </div>
+    
+  </section>
+  
+</footer>
+
+</div>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-10147768-2', 'auto');
+  ga('send', 'pageview');
+
+  $('#messagesbsb').remove();
+
+</script>
+</body>
+</html>
+

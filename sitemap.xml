@@ -2,6 +2,11 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/</loc>
+    <lastmod>2018-11-14T10:12:30+08:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-01/</loc>
     <lastmod>2018-11-13T11:41:44+08:00</lastmod>
   </url>
@@ -13,19 +18,19 @@
   
   <url>
     <loc>https://blog.tianyulab.com/post/</loc>
-    <lastmod>2018-11-13T11:41:44+08:00</lastmod>
+    <lastmod>2018-11-14T10:12:30+08:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>https://blog.tianyulab.com/</loc>
-    <lastmod>2018-11-13T11:41:44+08:00</lastmod>
+    <lastmod>2018-11-14T10:12:30+08:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>https://blog.tianyulab.com/categories/%E5%A8%81%E8%83%81%E7%8C%8E%E6%9D%80/</loc>
-    <lastmod>2018-11-13T11:41:44+08:00</lastmod>
+    <lastmod>2018-11-14T10:12:30+08:00</lastmod>
     <priority>0</priority>
   </url>
   

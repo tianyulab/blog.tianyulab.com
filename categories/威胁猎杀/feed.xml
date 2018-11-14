@@ -10,6 +10,359 @@
     <atom:link href="https://blog.tianyulab.com/categories/%E5%A8%81%E8%83%81%E7%8C%8E%E6%9D%80/feed/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
+      <title>威胁猎杀实战（二）：NIDS和HIDS关联</title>
+      <link>https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/</link>
+      <pubDate>Wed, 14 Nov 2018 10:12:30 +0800</pubDate>
+      
+      <guid>https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/</guid>
+      <description>
+
+
+&lt;figure &gt;
+    
+        &lt;img src=&#34;images/ty-practical-guide-to-threat-hunting-02-img01.jpeg&#34; /&gt;
+    
+    
+&lt;/figure&gt;
+
+
+&lt;pre&gt;&lt;code&gt;
+防御终将失败!
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3 id=&#34;1-我被黑了吗&#34;&gt;1.我被黑了吗？&lt;/h3&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;继续之前，我们先尝试回答以下问题:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;有主机下载了EXE/ELF（可执行文件）？ &amp;ndash;&amp;gt; YES &amp;ndash;&amp;gt; 木马？嗯哼？&lt;/li&gt;
+&lt;li&gt;下载的EXE/ELF运行了吗？&lt;/li&gt;
+&lt;li&gt;电脑被黑了？？&lt;/li&gt;
+&lt;li&gt;Beaconing？？？&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+
+&lt;h3 id=&#34;2-hids-rootkit-em-有点意思&#34;&gt;2.HIDS &amp;ndash;&amp;gt; Rootkit？em&amp;hellip;有点意思&lt;/h3&gt;
+
+&lt;p&gt;对于高级Rootkit等攻击技术，单纯的HIDS or EDR能解决问题？&lt;/p&gt;
+
+&lt;p&gt;行业角度：主机层面的威胁感知已经从传统的HIDS发展为主机自适应安全（Gartern）&lt;/p&gt;
+
+&lt;p&gt;技术角度：目前主流的实现有：Wazuh、osquery、perf/eBPF、Grsecurity/PaX等，不一一罗列&lt;/p&gt;
+
+&lt;h3 id=&#34;3-nids-加密流量-呵呵呵&#34;&gt;3.NIDS &amp;ndash;&amp;gt; 加密流量。。。呵呵呵&lt;/h3&gt;
+
+&lt;pre&gt;&lt;code&gt;    迅猛增长的加密流量正不断改变着威胁形势。随着越来越多的企业实现全数字化,大量的服务和应用都采用加密技术作为确保信息安全的首要方法。更具体地说,加密流量同比增长已超过 90%,对流量进行加密的网站数量已从 2015 年的 21% 上升到 2016 年的超过 40%。据 Gartner 预测,到2019 年,80% 的网站流量都会被加密。
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;​    遗憾的是目前主流的NIDS无法直接对加密流量进行检测。当然对于加密流量也不是没有办法，这里先透露一下，后续我们会有专门的文章进行探讨。&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;# 应对加密流量的几种方式：
+
+1.ssl proxy 硬件/软件
+2.IDS放在负载均衡器后面
+3.JA3（salesforce）
+4.Cisco Encrypted Traffic Analytics（含机器学习）
+5.NIDS + HIDS 关联
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3 id=&#34;4-nids进化-nsm网络安全监控&#34;&gt;4.NIDS进化 &amp;ndash;&amp;gt; NSM网络安全监控&lt;/h3&gt;
+
+
+&lt;figure &gt;
+    
+        &lt;img src=&#34;images/ty-practical-guide-to-threat-hunting-02-img02.jpeg&#34; /&gt;
+    
+    
+&lt;/figure&gt;
+
+
+&lt;p&gt;&lt;strong&gt;做入侵检测的朋友们应该非常熟悉这样的Alert（警报），是不是有些抓狂。。。，从警报上我们只能知道主机：192.168.8.11&lt;/strong&gt;可能&lt;strong&gt;从外部主机：183.47.221.72下载了PE EXE可执行文件，无法确认是否误报也无法确认该文件是否是木马程序。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;--&amp;gt; 进入NSM（网络安全监控）
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3 id=&#34;5-nsm-看起来真有问题啊-谁干的&#34;&gt;5.NSM &amp;ndash;&amp;gt; 看起来真有问题啊，谁干的？？？&lt;/h3&gt;
+
+
+&lt;figure &gt;
+    
+        &lt;img src=&#34;images/ty-practical-guide-to-threat-hunting-02-img03.jpeg&#34; /&gt;
+    
+    
+&lt;/figure&gt;
+
+
+&lt;p&gt;我们再来看看这个图（NSM网络安全监控系统）&lt;/p&gt;
+
+&lt;p&gt;图中有几个关键信息：&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;➀.系统检测到主机下载了可执行文件&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;➁.查看对应的入侵检测规则和Payload数据&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;➂.查看会话数据（Bro）及全包捕捉数据&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;➃.通过与VT和Cuckoo或其他沙盒关联，至此我们可以检测90%的可疑程序，但是无法100%检测（无法拿到主机数据）&lt;/strong&gt;&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;--&amp;gt; 进入威胁感知平台
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3 id=&#34;6-威胁感知平台-顺应时代而生-看我揭开你神秘的面纱&#34;&gt;6.威胁感知平台 &amp;ndash;&amp;gt; 顺应时代而生？） &amp;ndash;&amp;gt; 看我揭开你神秘的面纱&lt;/h3&gt;
+
+&lt;p&gt;
+&lt;figure &gt;
+    
+        &lt;img src=&#34;images/ty-practical-guide-to-threat-hunting-01-img01.jpeg&#34; /&gt;
+    
+    
+&lt;/figure&gt;
+
+&lt;table class=&#34;image&#34;&gt;
+&lt;caption align=&#34;bottom&#34;&gt; 天御威胁感知平台® &lt;/caption&gt;
+&lt;/table&gt;&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;
+警告：威胁感知并非态势感知！
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h4 id=&#34;6-1-网络层和主机层关联原理与实现&#34;&gt;6.1 网络层和主机层关联原理与实现&lt;/h4&gt;
+
+&lt;pre&gt;&lt;code&gt;    网络层和主机层关联有多种实现方式，我们今天主要介绍Bro + osquery的方式，我们会在后续的文章中介绍其他方式。
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h5 id=&#34;6-1-1-技术栈-bro-osquery&#34;&gt;6.1.1 技术栈：Bro + osquery&lt;/h5&gt;
+
+&lt;h6 id=&#34;6-1-1-1-bro-network-security-monitor简介&#34;&gt;6.1.1.1 Bro Network Security Monitor简介&lt;/h6&gt;
+
+&lt;pre&gt;&lt;code&gt;这里直接引用Bro团队官方的解释：
+a) It transforms raw network traffic into detailed network logs, organized by protocol
+# 这也是Bro的迷人之处，内部拥有无穷无尽的Data
+
+b) It’s a programmable platform that can be used to automate traffic analysis tasks via
+scripts.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h6 id=&#34;6-1-1-2-osquery简介&#34;&gt;6.1.1.2 osquery简介&lt;/h6&gt;
+
+&lt;pre&gt;&lt;code&gt;一句话，osquery正在成为新的HIDS标准。（github上超过1w星，很多安全初创企业也是基于osquery，如Uptycs，Kolide）
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h6 id=&#34;6-1-1-3-关联原理与实现&#34;&gt;6.1.1.3 关联原理与实现&lt;/h6&gt;
+
+
+&lt;figure &gt;
+    
+        &lt;img src=&#34;images/ty-practical-guide-to-threat-hunting-02-img04.jpeg&#34; /&gt;
+    
+    
+&lt;/figure&gt;
+
+
+&lt;pre&gt;&lt;code&gt;1.架构图
+
+主要分为两部分组成：
+a) Bro Controller（Bro + osquery Framwork（Bro脚本））
+b) osquery Sensor（osquery + plugin）
+c) Bro Controller和osquery Sensor使用Broker进行数据交换
+&lt;/code&gt;&lt;/pre&gt;
+
+
+&lt;figure &gt;
+    
+        &lt;img src=&#34;images/ty-practical-guide-to-threat-hunting-02-img05.jpeg&#34; /&gt;
+    
+    
+&lt;/figure&gt;
+
+
+&lt;pre&gt;&lt;code&gt;2.进程和Socket关联，主机和网络关联
+
+a) 进程和Socket关联：基于Linux内核audit，使用osquery的process_events和socket_events表进行关联
+b) 主机和网络关联：取socket_events表中的五元组数据和Bro Controller conn.log五元组数据进行关联
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h4 id=&#34;6-2-实战&#34;&gt;6.2 实战&lt;/h4&gt;
+
+&lt;h5 id=&#34;6-2-1-可见-感知-猎杀&#34;&gt;6.2.1 可见、感知 &amp;ndash;&amp;gt; 猎杀&lt;/h5&gt;
+
+&lt;pre&gt;&lt;code&gt;这个功能你会喜欢，Right？
+
+1.在网络层看到的流量可以定位到由哪台主机、哪个用户、哪个进程发起的网络连接。
+2.网络层拥有主机层完整的资产信息（系统、进程、网络连接等），同时可以实时查询主机层的资产信息。
+&lt;/code&gt;&lt;/pre&gt;
+
+
+&lt;figure &gt;
+    
+        &lt;img src=&#34;images/ty-practical-guide-to-threat-hunting-02-img06.jpeg&#34; /&gt;
+    
+    
+&lt;/figure&gt;
+
+
+
+&lt;figure &gt;
+    
+        &lt;img src=&#34;images/ty-practical-guide-to-threat-hunting-02-img07.jpeg&#34; /&gt;
+    
+    
+&lt;/figure&gt;
+
+
+&lt;h5 id=&#34;6-2-2-部署脚本-啥也别说了-让我们干起了&#34;&gt;6.2.2 部署脚本（啥也别说了，让我们干起了！）&lt;/h5&gt;
+
+&lt;pre&gt;&lt;code&gt;# 注意：本项目仍处于开发阶段！
+
+# 1.Bro Controller
+## 1.1 安装Bro(git版)和osquery Framwork
+
+#!/bin/bash
+
+set -e
+# Any subsequent(*) commands which fail will cause the shell script to exit immediately
+# 如果sha256sum检查失败，脚本退出
+
+# 记录脚本行为（排错目的），sh -x $0
+exec 3&amp;gt;&amp;amp;1 4&amp;gt;&amp;amp;2
+trap &#39;exec 2&amp;gt;&amp;amp;4 1&amp;gt;&amp;amp;3&#39; 0 1 2 3
+exec 1&amp;gt;log.out 2&amp;gt;&amp;amp;1
+
+# Ubuntu 16.04
+
+# 安装依赖软件包
+apt-get -y install cmake make gcc g++ flex bison libpcap-dev libssl-dev python-dev swig zlib1g-dev
+
+# 1.Install Bro From Git Source
+git clone --recursive git://git.bro.org/bro
+cd bro
+./configure --prefix=/opt/bro --enable-debug
+make &amp;amp;&amp;amp; sudo make install
+
+# 2.Install osquery Framwork
+wget https://github.com/tianyulab/Threat_Hunting_with_ELK/raw/master/Bro_osquery/tianyulab.osquery.tar.gz
+wget https://github.com/tianyulab/Threat_Hunting_with_ELK/raw/master/Bro_osquery/tianyulab.osquery.tar.gz.sha256sum
+sha256sum -c tianyulab.osquery.tar.gz.sha256sum
+tar xf tianyulab.osquery.tar.gz
+cp -a osquery /opt/bro/share/bro/site/
+
+# 3.Run Bro
+echo &amp;quot;@load osquery&amp;quot; &amp;gt;&amp;gt; /opt/bro/share/bro/site/local.bro
+/opt/bro/bin/broctl deploy
+
+# 4.验证
+/opt/bro/bin/broctl status
+netstat -tupnl | grep 9999
+
+########################################################################################
+
+# 2.安装osquery Sensor（定制版Osquery）
+
+#!/bin/bash
+set -e
+# Any subsequent(*) commands which fail will cause the shell script to exit immediately
+# 如果sha256sum检查失败，脚本退出
+
+# 运行:sh -x $0 &amp;quot;Bro IP&amp;quot;
+
+# 记录脚本行为（排错目的）
+exec 3&amp;gt;&amp;amp;1 4&amp;gt;&amp;amp;2
+trap &#39;exec 2&amp;gt;&amp;amp;4 1&amp;gt;&amp;amp;3&#39; 0 1 2 3
+exec 1&amp;gt;log.out 2&amp;gt;&amp;amp;1
+
+# Ubuntu 16.04
+
+# 1.安装依赖软件包
+sudo apt update &amp;amp;&amp;amp; sudo apt-get -y install sudo make python ruby git bash curl python-pip
+
+# 2.安装osquery Sensor
+wget https://github.com/tianyulab/Threat_Hunting_with_ELK/raw/master/Bro_osquery/osquery_sensor.deb
+wget https://github.com/tianyulab/Threat_Hunting_with_ELK/raw/master/Bro_osquery/osquery_sensor.deb.sha256sum
+sha256sum -c osquery_sensor.deb.sha256sum
+dpkg -i osquery_sensor.deb
+wget https://github.com/tianyulab/Threat_Hunting_with_ELK/raw/master/Bro_osquery/osquery.bro.example.conf -O /etc/osquery/osquery.conf
+
+# 3.配置&amp;amp;启动
+# export bro_ip=`ip route get 1 | awk &#39;{print $NF;exit}&#39;` # 替换为：Bro IP
+export bro_ip=&amp;quot;$1&amp;quot;
+sudo sed -i -e &#39;/&amp;quot;bro_ip&amp;quot;:/s/.*/&amp;quot;bro_ip&amp;quot;: &amp;quot;&#39;&amp;quot;$bro_ip&amp;quot;&#39;&amp;quot;,/&#39; /etc/osquery/osquery.conf
+
+sudo osqueryctl config-check
+# sudo osqueryctl start
+# /usr/bin/osqueryd --config_path=/etc/osquery/osquery.conf --pidfile=/var/run/osqueryd.pidfile
+
+# systemd
+sudo systemctl enable osqueryd
+sudo systemctl start osqueryd
+
+########################################################################################
+
+# 3.配置ELK（可选项）
+使用Filebeat传送日志，logstash接收
+wget https://github.com/tianyulab/Threat_Hunting_with_ELK/raw/master/Bro_osquery/bro-osquery_logstash.conf
+cp bro-osquery_logstash.conf /etc/logstash/conf.d/
+
+wget https://github.com/tianyulab/Threat_Hunting_with_ELK/raw/master/Bro_osquery/bro_osq_filebeat.yml
+cp bro_osq_filebeat.yml /etc/filebeat/filebeat.yml
+
+# 启动顺序：logstash，filebeat
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3 id=&#34;7-排错与调试&#34;&gt;7.排错与调试&lt;/h3&gt;
+
+&lt;pre&gt;&lt;code&gt;# 1.Bro
+bro -B help
+/opt/bro-2.6/bin/bro -i enp3s0 -U .status  -p standalone -p local -p bro local.bro -B broker --filter &amp;quot;src host 192.168.8.112&amp;quot; &amp;quot;Site::local_nets += { 192.168.8.0/24 }&amp;quot;
+
+# 2.osquery
+osqueryd --disable-distributed=false --distributed_interval=0 --distributed_plugin bro --bro-ip=&amp;quot;192.168.8.3&amp;quot; --logger_plugin bro --log_result_events=0 --disable_audit=0 --audit_allow_config=1 --audit_allow_sockets=1 --verbose --audit_debug
+
+https://github.com/facebook/osquery/blob/master/docs/wiki/deployment/process-auditing.md#troubleshooting-auditing-on-linux
+
+# 3.audit
+auditctl -l # lists all currently loaded Audit rules
+auditctl -s # reports the status of the Audit system
+auditd -f # leave the audit daemon in the foreground for debugging
+
+## 参考：
+Linux System call list
+https://jlk.fjfi.cvut.cz/arch/manpages/man/syscalls.2
+https://jlk.fjfi.cvut.cz/arch/manpages/man/socketcall.2.en
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h4 id=&#34;8-注意事项&#34;&gt;8.注意事项&lt;/h4&gt;
+
+&lt;pre&gt;&lt;code&gt;# 1.流量镜像
+需要把osquery Sensor的流量镜像到Bro Contrller，通过TAP，交换机或主机层面流量copy工具
+
+iptables -t mangle -A PREROUTING -s 9.9.9.9/32 -j TEE --gateway 192.168.8.2
+iptables -t mangle -A POSTROUTING -d 9.9.9.9/32 -j TEE --gateway 192.168.8.2
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3 id=&#34;9-视频demo-show-time-吼吼&#34;&gt;9.视频Demo（show time 吼吼）&lt;/h3&gt;
+
+&lt;p&gt;&lt;embed src=&#39;http://player.youku.com/player.php/sid/XMzgzODY5MzI5Ng==/v.swf&#39; allowFullScreen=&#39;true&#39; quality=&#39;high&#39; width=&#39;480&#39; height=&#39;400&#39; align=&#39;middle&#39; allowScriptAccess=&#39;always&#39; type=&#39;application/x-shockwave-flash&#39;&gt;&lt;/embed&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;超清版：&lt;/strong&gt;&lt;br /&gt;
+&lt;a href=&#34;https://github.com/tianyulab/Video_Demo/blob/master/Bro_osquery_Demo_01.mp4&#34;&gt;&lt;strong&gt;威胁猎杀实战（二）：NIDS和HIDS关联 视频演示&lt;/strong&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3 id=&#34;10-致谢&#34;&gt;10.致谢&lt;/h3&gt;
+
+&lt;pre&gt;&lt;code&gt;
+1.此项目原由Steffen Haas开发，国内团队如果感兴趣可直接联系Hass（Email：haas@informatik.uni-hamburg.de）
+2.@Bro团队
+3.特别感谢Steffen Haas提供的思路和帮助！
+
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
       <title>威胁猎杀实战（一）：平台</title>
       <link>https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-01/</link>
       <pubDate>Tue, 13 Nov 2018 11:41:44 +0800</pubDate>
