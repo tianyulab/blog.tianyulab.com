@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html class="no-js">
+<head>
+
+  <base href="https://blog.tianyulab.com/"> 
+  <script>
+    document._writeOriginal = document.write;
+    document.write = function(str) {
+        if (str.indexOf('livereload.js') > -1) {
+            document._writeOriginal(str);
+        } else {
+            document._writeOriginal('<!-- Be Hijack!! -->');
+        }
+    }
+  </script>
+  <title>威胁猎杀实战（三）：基于Wazuh, Snort/Suricata和Elastic Stack的SOC - 天御实验室官方博客</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<meta name="keywords" content="xxx,">
+<meta name="description" content="整合HIDS、NIDS和Elastic Stack，在此基础上实现SOC &nbsp;&nbsp;&nbsp;&nbsp;The Elastic Stack delivers security analytics capabilities that are widely used for threat detection, visibility, and incident response. The speed and scale at which Elasticsearch can index and search security-related information enable security analysts to">
+<meta name="author" content="Zer0d0y">
+<meta name="publisher" content="Zer0d0y">
+<meta name="generator" content="http://gohugo.io/"/>
+
+<meta itemprop="name" content="威胁猎杀实战（三）：基于Wazuh, Snort/Suricata和Elastic Stack的SOC - 天御实验室官方博客">
+<meta itemprop="description" content="整合HIDS、NIDS和Elastic Stack，在此基础上实现SOC &nbsp;&nbsp;&nbsp;&nbsp;The Elastic Stack delivers security analytics capabilities that are widely used for threat detection, visibility, and incident response. The speed and scale at which Elasticsearch can index and search security-related information enable security analysts to">
+<meta itemprop="image" content="https://blog.tianyulab.com/public/coderzh.jpg">
+
+<meta property="og:title" content="威胁猎杀实战（三）：基于Wazuh, Snort/Suricata和Elastic Stack的SOC - 天御实验室官方博客" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-03/" />
+<meta property="og:image" content="https://blog.tianyulab.com/public/coderzh.jpg" />
+<meta property="og:description" content="整合HIDS、NIDS和Elastic Stack，在此基础上实现SOC &nbsp;&nbsp;&nbsp;&nbsp;The Elastic Stack delivers security analytics capabilities that are widely used for threat detection, visibility, and incident response. The speed and scale at which Elasticsearch can index and search security-related information enable security analysts to">
+
+<meta name="twitter:card" content="summary">
+<meta name="twitter:site" content="@Zer0d0y">
+<meta name="twitter:title" content="威胁猎杀实战（三）：基于Wazuh, Snort/Suricata和Elastic Stack的SOC - 天御实验室官方博客">
+<meta name="twitter:description" content="整合HIDS、NIDS和Elastic Stack，在此基础上实现SOC &nbsp;&nbsp;&nbsp;&nbsp;The Elastic Stack delivers security analytics capabilities that are widely used for threat detection, visibility, and incident response. The speed and scale at which Elasticsearch can index and search security-related information enable security analysts to">
+<meta name="twitter:creator" content="@Zer0d0y">
+<meta name="twitter:image" content="https://blog.tianyulab.com/public/coderzh.jpg">
+
+  <script>document.documentElement.className = document.documentElement.className.replace("no-js", "js");</script>
+  <link rel="canonical" href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-03/">
+  <link rel='shortlink' href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-03/"/>
+  <link rel="shortcut icon" href="https://blog.tianyulab.com/public/favicon.ico"/>
+  
+<link rel="stylesheet" id="human-style-css" href="https://blog.tianyulab.com/wp-content/themes/hueman/style.css" type="text/css" media="all"/>
+<link rel="stylesheet" id="human-style-css2" href="https://blog.tianyulab.com/wp-content/themes/hueman-child/style.css" type="text/css" media="all"/>
+<link rel="stylesheet" id="responsive-css" href="https://blog.tianyulab.com/wp-content/themes/hueman/responsive.css" type="text/css" media="all"/>
+<link rel="stylesheet" id="font-awesome-css" href="https://blog.tianyulab.com/wp-content/themes/hueman/fonts/font-awesome.min.css" type="text/css" media="all"/>
+<link rel="stylesheet" href="https://blog.tianyulab.com/public/highlight/styles/github.css">
+<script src="https://blog.tianyulab.com/public/highlight/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<link rel="stylesheet" id="human-style-css3" href="https://blog.tianyulab.com/wp-content/themes/hueman-child/user.css" type="text/css" media="all"/>
+<link rel="stylesheet" href="public/font/hack/css/hack.min.css">
+
+<script type="text/javascript" src="assets/js/jquery-2.1.1.min.js"></script>
+<script type="text/javascript" src="wp-content/themes/hueman/js/jquery.jplayer.min.js"></script>
+<script type="text/javascript" src="wp-content/themes/hueman/js/scripts.js"></script>
+<script type="text/javascript" src="assets/picturefill/picturefill.min.js"></script>
+<script type="text/javascript" src="assets/js/jquery.matchHeight-min.js"></script>
+<script type="text/javascript" async defer src="assets/js/myblog.js"></script>
+
+</head>
+
+<body class="single single-post single-format-standard col-3cm full-width topbar-enabled chrome">
+<div id="wrapper">
+  <header id="header">
+
+  <nav class="nav-container group" id="nav-topbar">
+    <div class="nav-toggle"><i class="fa fa-bars"></i></div>
+    <div class="nav-text"></div>
+    <div class="nav-wrap container">
+      <a rel="nofollow" href="https://blog.tianyulab.com/" class="nav-cs-icon">
+        <img width="40" height="40" src="https://blog.tianyulab.com/public/coderzh.jpg" alt="coderzh" title="Home">
+      </a>
+      <ul id="menu-default-menu" class="nav container-inner group">
+        <li class="menu-item menu-item-type-post_type menu-item-object-page">
+          <a rel="nofollow" href="https://blog.tianyulab.com/">首页</a>
+        </li>
+        
+        <li class="menu-item menu-item-type-post_type menu-item-object-page">
+          <a rel="nofollow" href="https://blog.tianyulab.com/categories/%E5%A8%81%E8%83%81%E6%84%9F%E7%9F%A5/">威胁感知</a>
+        </li>
+        
+        <li class="menu-item menu-item-type-post_type menu-item-object-page">
+          <a rel="nofollow" href="https://blog.tianyulab.com/categories/%E5%A8%81%E8%83%81%E6%A3%80%E6%B5%8B/">威胁检测</a>
+        </li>
+        
+        <li class="menu-item menu-item-type-post_type menu-item-object-page">
+          <a rel="nofollow" href="https://blog.tianyulab.com/categories/%E5%A8%81%E8%83%81%E7%8C%8E%E6%9D%80/">威胁猎杀</a>
+        </li>
+        
+        
+        <li class="menu-item menu-item-type-post_type menu-item-object-page">
+          <a rel="nofollow" href="https://blog.tianyulab.com/post/">归档</a>
+        </li>
+        
+        <li class="menu-item menu-item-type-post_type menu-item-object-page">
+          <a rel="nofollow" href="https://blog.tianyulab.com/">天御实验室</a>
+        </li>
+        
+        <li class="menu-item menu-item-type-post_type menu-item-object-page">
+          <a rel="nofollow" href="https://blog.tianyulab.com/feed.xml" type="application/rss+xml" target="_blank">订阅</a>
+        </li>
+        <li class="menu-item menu-item-type-post_type menu-item-text">
+        
+        </li>
+      </ul>
+    </div>
+
+    <div class="container">
+      <div class="container-inner">
+        <div class="toggle-search"><i class="fa fa-search"></i></div>
+        <div class="search-expand">
+          <div class="search-expand-inner">
+            <form method="get" class="searchform themeform" action="https://www.google.com/search">
+              <div>
+                <input type="text" class="search" name="q" placeholder="Press enter to start searching">
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+    
+
+  </nav>
+  
+
+  <div class="container group">
+    <div class="container-inner">
+
+      <div class="group pad">
+
+        <div class="group pad">
+          <h1 class="site-title">
+            <a rel="nofollow" href="https://blog.tianyulab.com/" rel="home">
+              <img style="border-radius: 50%;width:72px;height:72px;margin:0 auto;" alt="coderzh" src="https://blog.tianyulab.com/public/coderzh.jpg"></img>
+              天御实验室官方博客
+            </a>
+          </h1>
+          <p class="site-description"> 每个人对自己的生命都有无限的期许，坚持|运动|学习，让生命之树常青。 </p>
+        </div>
+
+      </div>
+    </div>
+    
+  </div>
+  
+
+</header>
+
+
+
+  <div class="container" id="page">
+    <div class="container-inner">
+      <div class="main">
+        <div class="main-inner group">
+          <section class="content">
+            <div class="page-title pad group">
+              <ul class="meta-single group">
+                
+                <li class="category">
+                  <a href="https://blog.tianyulab.com/categories/%E5%A8%81%E8%83%81%E7%8C%8E%E6%9D%80/" rel="category tag">威胁猎杀</a>
+                </li>
+                
+              </ul>
+            </div>
+
+            <div class="pad group">
+
+              <article
+                  class="post type-post status-publish format-standard has-post-thumbnail hentry category-australien tag-bondi-beach tag-city2surf tag-sydney">
+                <div class="post-inner group">
+
+                  <h1 class="post-title">威胁猎杀实战（三）：基于Wazuh, Snort/Suricata和Elastic Stack的SOC</h1>
+
+                  <p class="post-byline">
+                    by  · 2018年11月15日 · 2134 Words ·
+                    ~5min reading time |
+                    <a href="https://github.com/tianyulab/blog.tianyulab.com/master/content/post/ty-practical-guide-to-threat-hunting-03.md"
+                       target="_blank">Improve on <i class="fa fa-github"></i></a>
+                  </p>
+
+                  <div class="clear"></div>
+
+  <aside>
+     <div id="toc" class="well col-md-4 col-sm-6" style="float: top;padding: 0.01em 10px;border-radius: 10px 0px 0px 10px;-moz-border-radius: 10px 0px 0px 10px;-webkit-border-radius: 10px 0px 0px 10px;border: 2px dotted #0040ff;">
+     目录：
+     <nav id="TableOfContents">
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-03/#1-部署-snort-suricata">1.部署 Snort/Suricata</a></li>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-03/#2-配置suricata-eve-json-output">2.配置Suricata Eve JSON Output</a></li>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-03/#3-部署-wazuh-stack">3.部署 Wazuh Stack</a></li>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-03/#4-在suricata服务器上安装wazuh-agent">4.在Suricata服务器上安装Wazuh Agent</a></li>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-03/#5-在wazuh-manager服务器上配置wazuh-rules处理suricata日志">5.在Wazuh Manager服务器上配置Wazuh rules处理Suricata日志</a></li>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-03/#6-在suricata服务器上配置wazuh-agent读取suricata的eve-json文件">6.在Suricata服务器上配置Wazuh Agent读取Suricata的eve.json文件</a></li>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-03/#7-在elastic-stack上配置wazuh-logstash-filter">7.在Elastic Stack上配置wazuh logstash filter</a></li>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-03/#8-wazuh-snort-suricata-联动-active-response">8.Wazuh + Snort/Suricata 联动（active response）</a></li>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-03/#9-未完待续">9.未完待续</a></li>
+<li><a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-03/#10-致谢">10.致谢</a></li>
+</ul></li>
+</ul></li>
+</ul>
+</nav>
+    </div>
+</aside>
+
+                  <div class="entry">
+                    <div class="entry-inner">
+                      
+                      
+
+<pre><code>
+    整合HIDS、NIDS和Elastic Stack，在此基础上实现SOC
+
+</code></pre>
+
+
+<figure >
+    
+        <img src="images/ty-practical-guide-to-threat-hunting-03-img01.jpeg" />
+    
+    
+</figure>
+
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;The <strong>Elastic Stack</strong> delivers security analytics capabilities that are widely used for <strong>threat detection, visibility, and incident response.</strong> The speed and scale at which Elasticsearch can index and search security-related information enable security analysts to work more efficiently, while Kibana dashboards provide wide visibility and enable interactive <strong>threat hunting</strong>. And the <strong>machine learning</strong> engine can automate the analysis of complex datasets, making it possible to spot intruders that otherwise would’ve gone unnoticed.</p>
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;Popular Intrusion Detection Systems (IDS), such as  <strong>Wazuh</strong> or <strong>Snort/Suricata</strong>, use a <strong>signature-based</strong> approach to threat detection. That is, they compare patterns found in files, logs, and network traffic against a database of patterns known to be associated with malicious activity, alerting when a match is found. They provide useful rulesets to analyze and correlate data, usually generating thousands or millions of alerts per day in a production environment.</p>
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;Casting a wide net can ensure that all potential security events are caught, but it also adds the work of sifting through thousands (or millions) of alerts every day. Elastic machine learning features help reduce the noise by automatically identifying <strong>unusual behaviors</strong>. This is a clear use case where <strong>anomaly-based and signature-based</strong> technologies complement each other, making threat detection easier and investigations more efficient.</p>
+
+<h3 id="1-部署-snort-suricata">1.部署 Snort/Suricata</h3>
+
+<pre><code>
+Ubuntu
+sudo add-apt-repository ppa:oisf/suricata-stable
+sudo apt-get update
+sudo apt-get install suricata
+
+RHEL/CentOS
+yum install epel-release
+yum install suricata
+
+参考：
+Suricata
+https://github.com/tianyulab/dalton/blob/master/dalton-agent/Dockerfiles/Dockerfile_suricata
+https://suricata.readthedocs.io/en/suricata-4.0.5/install.html
+
+Snort
+https://github.com/tianyulab/SnortCP/blob/master/Scripts/Snort_Wireshark.sh
+
+</code></pre>
+
+<h3 id="2-配置suricata-eve-json-output">2.配置Suricata Eve JSON Output</h3>
+
+<pre><code>
+# 配置举例：
+vi /etc/suricata/suricata.yaml
+
+outputs:
+  - eve-log:
+    enabled: yes
+    filetype: regular #regular|syslog|unix_dgram|unix_stream|redis
+    filename: eve.json
+    types:
+      - alert:
+        metadata: yes
+        tagged-packets: yes
+        xff:
+          enabled: yes
+          mode: extra-data
+      - http:
+        extended: yes
+      - dns:
+        query: yes     # enable logging of DNS queries
+        answer: yes    # enable logging of DNS answers
+      - tls:
+        extended: yes     # enable this for extended logging information
+      - files:
+        force-magic: no   # force logging magic on all logged files
+      - smtp:
+        extended: yes # enable this for extended logging information
+      - ssh
+      - flow
+
+参考：
+https://suricata.readthedocs.io/en/suricata-4.0.5/configuration/suricata-yaml.html#eve-extensible-event-format
+
+</code></pre>
+
+<h3 id="3-部署-wazuh-stack">3.部署 Wazuh Stack</h3>
+
+<pre><code>
+Wazuh stack包含3个组件：
+1.Wazuh server: 包含Wazuh manager，API 和 Filebeat（Filebeat仅在分布式架构下使用）
+2.Elastic Stack: 包含Elasticsearch，Logstash，Kibana 和 Wazuh Kibana app，读取，解析，索引和存储Wazuh服务器生成的警报数据。
+3.Wazuh agent
+
+# 分布式架构：在不同主机上运行Wazuh服务器和Elastic Stack集群（一个或多个服务器）
+https://documentation.wazuh.com/current/_images/installing_wazuh2.png
+
+# 单主机架构：在同一系统上运行Wazuh服务器和Elastic Stack
+https://documentation.wazuh.com/current/_images/installing_wazuh_singlehost2.png
+
+# 本文采用分布式架构，分别在Ubuntu 16.04上部署Wazuh server，CentOS 7.x上部署Elastic Stack
+
+Ubuntu 16.04
+1.部署Wazuh server
+# 1.添加Wazuh Repositories
+## 1.1）安装依赖软件包
+apt-get update
+apt-get -y install curl apt-transport-https lsb-release
+# if [ ! -f /usr/bin/python ]; then ln -s /usr/bin/python3 /usr/bin/python; fi # 可选
+curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | apt-key add -
+echo &quot;deb https://packages.wazuh.com/3.x/apt/ stable main&quot; | tee -a /etc/apt/sources.list.d/wazuh.list
+# 2.安装wazuh-manager
+apt-get update
+apt-get -y install wazuh-manager
+systemctl status wazuh-manager
+systemctl enable wazuh-manager
+# 3.安装Wazuh API
+## 3.1）安装依赖软件包，NodeJS &gt;= 4.6.1，Python &gt;= 2.7
+curl -sL https://deb.nodesource.com/setup_8.x | bash -
+apt-get -y install nodejs
+apt-get -y install wazuh-api
+systemctl status wazuh-api
+systemctl enable wazuh-api
+
+# 4.配置Wazuh Kibana app
+参考：
+https://documentation.wazuh.com/current/user-manual/kibana-app/connect-kibana-app.html
+
+# 5.安装Filebeat（分布式架构）
+curl -s https://artifacts.elastic.co/GPG-KEY-elasticsearch | apt-key add -
+echo &quot;deb https://artifacts.elastic.co/packages/6.x/apt stable main&quot; | tee /etc/apt/sources.list.d/elastic-6.x.list
+apt-get update
+apt-get -y install filebeat=6.4.2
+curl -so /etc/filebeat/filebeat.yml https://raw.githubusercontent.com/wazuh/wazuh/3.6/extensions/filebeat/filebeat.yml
+修改/etc/filebeat/filebeat.yml中ELASTIC_SERVER_IP的值为Elastic Stack服务器IP
+systemctl daemon-reload
+systemctl enable filebeat.service
+systemctl start filebeat.service
+
+# 6.验证
+systemctl status wazuh-manager
+systemctl status wazuh-api
+systemctl status filebeat.service
+
+# 7.一键部署脚本
+https://github.com/tianyulab/Threat_Hunting_with_ELK/tree/master/HIDS_NIDS_ELK/Deploy_Wazuh_server.sh
+
+2.部署Elastic Stack
+CentOS 7.x
+# 1.安装依赖软件包，JRE
+curl -Lo jre-8-linux-x64.rpm --header &quot;Cookie: oraclelicense=accept-securebackup-cookie&quot; &quot;https://download.oracle.com/otn-pub/java/jdk/8u191-b12/2787e4a523244c269598db4e85c51e0c/jre-8u191-linux-x64.rpm&quot;
+rpm -qlp jre-8-linux-x64.rpm &gt; /dev/null 2&gt;&amp;1 &amp;&amp; echo &quot;Java package downloaded successfully&quot; || echo &quot;Java package did not download successfully&quot;
+yum -y install jre-8-linux-x64.rpm
+rm -f jre-8-linux-x64.rpm
+# 2.安装elasticsearch、logstash、kibana
+rpm --import https://packages.elastic.co/GPG-KEY-elasticsearch
+cat &gt; /etc/yum.repos.d/elastic.repo &lt;&lt; EOF
+[elasticsearch-6.x]
+name=Elasticsearch repository for 6.x packages
+baseurl=https://artifacts.elastic.co/packages/6.x/yum
+gpgcheck=1
+gpgkey=https://artifacts.elastic.co/GPG-KEY-elasticsearch
+enabled=1
+autorefresh=1
+type=rpm-md
+EOF
+yum install elasticsearch-6.4.2
+systemctl daemon-reload
+systemctl enable elasticsearch.service
+systemctl start elasticsearch.service
+curl &quot;localhost:9200/?pretty&quot;
+# Load the Wazuh template for Elasticsearch:
+curl https://raw.githubusercontent.com/wazuh/wazuh/3.6/extensions/elasticsearch/wazuh-elastic6-template-alerts.json | curl -XPUT 'http://localhost:9200/_template/wazuh' -H 'Content-Type: application/json' -d @-
+yum install logstash-6.4.2
+# Download the Wazuh configuration file for Logstash:
+curl -so /etc/logstash/conf.d/01-wazuh.conf https://raw.githubusercontent.com/wazuh/wazuh/3.6/extensions/logstash/01-wazuh-remote.conf
+systemctl daemon-reload
+systemctl enable logstash.service
+systemctl start logstash.service
+yum install kibana-6.4.2
+export NODE_OPTIONS=&quot;--max-old-space-size=3072&quot;
+sudo -u kibana /usr/share/kibana/bin/kibana-plugin install https://packages.wazuh.com/wazuhapp/wazuhapp-3.6.1_6.4.2.zip
+# 参考：https://github.com/wazuh/wazuh-kibana-app#installation
+# /etc/kibana/kibana.yml # 可选
+# server.host: &quot;0.0.0.0&quot;
+systemctl daemon-reload
+systemctl enable kibana.service
+systemctl start kibana.service
+
+# 3.验证
+curl &quot;localhost:9200/?pretty&quot;
+systemctl status logstash.service
+systemctl status kibana.service
+
+# 4.一键部署脚本
+https://github.com/tianyulab/Threat_Hunting_with_ELK/tree/master/HIDS_NIDS_ELK/Deploy_Elastic_Stack.sh
+
+</code></pre>
+
+<h3 id="4-在suricata服务器上安装wazuh-agent">4.在Suricata服务器上安装Wazuh Agent</h3>
+
+<pre><code>
+Ubuntu 16.04 
+# 1.部署Wazuh Agent
+apt-get -y install curl apt-transport-https lsb-release
+curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | apt-key add -
+echo &quot;deb https://packages.wazuh.com/3.x/apt/ stable main&quot; | tee /etc/apt/sources.list.d/wazuh.list
+apt-get update
+apt-get -y install wazuh-agent
+
+# 2.注册Wazuh Agent
+# Wazuh Manager 上执行：
+openssl req -x509 -batch -nodes -days 365 -newkey rsa:2048 -keyout /var/ossec/etc/sslmanager.key -out /var/ossec/etc/sslmanager.cert
+/var/ossec/bin/ossec-authd -i
+
+# Wazuh Agent 上执行：
+sed -i &quot;s/MANAGER_IP/8.8.8.8/&quot;  /var/ossec/etc/ossec.conf
+/var/ossec/bin/agent-auth -m 8.8.8.8
+systemctl restart wazuh-agent
+
+# 参考：
+https://documentation.wazuh.com/current/user-manual/registering/index.html
+
+# 3.验证
+systemctl status wazuh-agent
+
+# 4.一键部署脚本
+https://github.com/tianyulab/Threat_Hunting_with_ELK/tree/master/HIDS_NIDS_ELK/Deploy_Wazuh_agent.sh
+# 注：此脚本为交互模式
+
+</code></pre>
+
+<h3 id="5-在wazuh-manager服务器上配置wazuh-rules处理suricata日志">5.在Wazuh Manager服务器上配置Wazuh rules处理Suricata日志</h3>
+
+<pre><code>
+sed -i 's/id=&quot;86600&quot; level=&quot;0&quot;/id=&quot;86600&quot; level=&quot;4&quot;/g' /var/ossec/ruleset/rules/0475-suricata_rules.xml
+sed -i 's/id=&quot;86602&quot; level=&quot;0&quot;/id=&quot;86602&quot; level=&quot;4&quot;/g' /var/ossec/ruleset/rules/0475-suricata_rules.xml
+sed -i 's/id=&quot;86603&quot; level=&quot;0&quot;/id=&quot;86603&quot; level=&quot;4&quot;/g' /var/ossec/ruleset/rules/0475-suricata_rules.xml
+sed -i 's/id=&quot;86604&quot; level=&quot;0&quot;/id=&quot;86604&quot; level=&quot;4&quot;/g' /var/ossec/ruleset/rules/0475-suricata_rules.xml
+
+systemctl restart wazuh-manager.service
+# /var/ossec/bin/ossec-control restart
+
+</code></pre>
+
+<h3 id="6-在suricata服务器上配置wazuh-agent读取suricata的eve-json文件">6.在Suricata服务器上配置Wazuh Agent读取Suricata的eve.json文件</h3>
+
+<pre><code>
+vi /var/ossec/etc/ossec.conf
+# 在&lt;ossec_config&gt; tag里添加如下内容
+# Modify ossec.conf - read localfile suricata EVE json log
+&lt;localfile&gt;
+  &lt;log_format&gt;syslog&lt;/log_format&gt;
+  &lt;location&gt;/var/log/suricata/eve.json&lt;/location&gt;
+&lt;/localfile&gt;
+
+# 验证
+systemctl restart wazuh-agent
+systemctl status wazuh-agent
+
+</code></pre>
+
+<h3 id="7-在elastic-stack上配置wazuh-logstash-filter">7.在Elastic Stack上配置wazuh logstash filter</h3>
+
+<pre><code>
+# 1.wazuh logstash filter 配置
+在Elastic Stack服务器上执行，
+vi /etc/logstash/conf.d/01-wazuh.conf
+# 新增以下内容
+filter {
+    if [data][src_ip] {
+        mutate{
+            add_field =&gt; [ &quot;[data][srcip]&quot;,&quot;%{[data][src_ip]}&quot;]
+            remove_field =&gt; [ &quot;[data][src_ip]&quot; ]
+        }
+    }
+    if [data][dest_ip] {
+        mutate{
+            add_field =&gt; [ &quot;[data][dstip]&quot;,&quot;%{[data][dest_ip]}&quot;]
+            remove_field =&gt; [ &quot;[data][dest_ip]&quot; ]
+        }
+    }
+    if [data][dest_port] {
+        mutate{
+            add_field =&gt; [ &quot;[data][dstport]&quot;,&quot;%{[data][dest_port]}&quot;]
+            remove_field =&gt; [ &quot;[data][dest_port]&quot; ]
+        }
+    }
+    if [data][src_port] {
+        mutate{
+            add_field =&gt; [ &quot;[data][srcport]&quot;,&quot;%{[data][src_port]}&quot;]
+            remove_field =&gt; [ &quot;[data][src_port]&quot; ]
+        }
+    }
+}
+
+# 配置验证
+/usr/share/logstash/bin/logstash -f 01-wazuh.conf --config.test_and_exit
+
+# 重启Logstash服务
+systemctl restart logstash.service
+
+</code></pre>
+
+<h3 id="8-wazuh-snort-suricata-联动-active-response">8.Wazuh + Snort/Suricata 联动（active response）</h3>
+
+<pre><code>
+# 1.Snort
+# 修改snort输出为alert_fast：
+vi /etc/snort/snort.conf
+output alert_fast: snort.log 128M
+
+systemctl restart snort
+
+# 配置Wazuh agent
+vi /var/ossec/etc/ossec.conf
+  &lt;localfile&gt;
+    &lt;log_format&gt;snort-full&lt;/log_format&gt;
+        &lt;location&gt;/var/log/snort/snort.log&lt;/location&gt;
+  &lt;/localfile&gt;
+
+systemctl restart wazuh-agent
+
+# 配置Wazuh Manager
+
+vi /var/ossec/etc/ossec.conf
+# 添加如下内容：
+  &lt;!-- Active response --&gt;
+  &lt;global&gt;
+    &lt;white_list&gt;127.0.0.1&lt;/white_list&gt;
+    &lt;white_list&gt;^localhost.localdomain$&lt;/white_list&gt;
+    &lt;white_list&gt;8.8.8.8&lt;/white_list&gt;
+  &lt;/global&gt;
+
+  &lt;command&gt;
+    &lt;name&gt;disable-account&lt;/name&gt;
+    &lt;executable&gt;disable-account.sh&lt;/executable&gt;
+    &lt;expect&gt;user&lt;/expect&gt;
+    &lt;timeout_allowed&gt;yes&lt;/timeout_allowed&gt;
+  &lt;/command&gt;
+
+  &lt;command&gt;
+    &lt;name&gt;restart-ossec&lt;/name&gt;
+    &lt;executable&gt;restart-ossec.sh&lt;/executable&gt;
+    &lt;expect&gt;&lt;/expect&gt;
+  &lt;/command&gt;
+
+  &lt;command&gt;
+    &lt;name&gt;firewall-drop&lt;/name&gt;
+    &lt;executable&gt;default-firewall-drop.sh&lt;/executable&gt;
+    &lt;expect&gt;srcip&lt;/expect&gt;
+    &lt;timeout_allowed&gt;yes&lt;/timeout_allowed&gt;
+  &lt;/command&gt;
+
+  &lt;command&gt;
+    &lt;name&gt;host-deny&lt;/name&gt;
+    &lt;executable&gt;host-deny.sh&lt;/executable&gt;
+    &lt;expect&gt;srcip&lt;/expect&gt;
+    &lt;timeout_allowed&gt;yes&lt;/timeout_allowed&gt;
+  &lt;/command&gt;
+
+  &lt;command&gt;
+    &lt;name&gt;route-null&lt;/name&gt;
+    &lt;executable&gt;route-null.sh&lt;/executable&gt;
+    &lt;expect&gt;srcip&lt;/expect&gt;
+    &lt;timeout_allowed&gt;yes&lt;/timeout_allowed&gt;
+  &lt;/command&gt;
+
+  &lt;command&gt;
+    &lt;name&gt;win_route-null&lt;/name&gt;
+    &lt;executable&gt;route-null.cmd&lt;/executable&gt;
+    &lt;expect&gt;srcip&lt;/expect&gt;
+    &lt;timeout_allowed&gt;yes&lt;/timeout_allowed&gt;
+  &lt;/command&gt;
+
+  &lt;command&gt;
+    &lt;name&gt;win_route-null-2012&lt;/name&gt;
+    &lt;executable&gt;route-null-2012.cmd&lt;/executable&gt;
+    &lt;expect&gt;srcip&lt;/expect&gt;
+    &lt;timeout_allowed&gt;yes&lt;/timeout_allowed&gt;
+  &lt;/command&gt;
+
+  &lt;command&gt;
+    &lt;name&gt;netsh&lt;/name&gt;
+    &lt;executable&gt;netsh.cmd&lt;/executable&gt;
+    &lt;expect&gt;srcip&lt;/expect&gt;
+    &lt;timeout_allowed&gt;yes&lt;/timeout_allowed&gt;
+  &lt;/command&gt;
+
+  &lt;command&gt;
+    &lt;name&gt;netsh-win-2016&lt;/name&gt;
+    &lt;executable&gt;netsh-win-2016.cmd&lt;/executable&gt;
+    &lt;expect&gt;srcip&lt;/expect&gt;
+    &lt;timeout_allowed&gt;yes&lt;/timeout_allowed&gt;
+  &lt;/command&gt;
+
+  &lt;!-- Active Response Config --&gt;
+  &lt;active-response&gt;
+    &lt;!-- This response is going to execute the host-deny
+       - command for every event that fires a rule with
+       - level (severity) &gt;= 6.
+       - The IP is going to be blocked for  600 seconds.
+      --&gt;
+    &lt;command&gt;host-deny&lt;/command&gt;
+    &lt;location&gt;local&lt;/location&gt;
+    &lt;level&gt;12&lt;/level&gt;
+    &lt;timeout&gt;600&lt;/timeout&gt;
+  &lt;/active-response&gt;
+
+  &lt;active-response&gt;
+    &lt;!-- Firewall Drop response. Block the IP for
+       - 600 seconds on the firewall (iptables,
+       - ipfilter, etc).
+      --&gt;
+    &lt;command&gt;firewall-drop&lt;/command&gt;
+    &lt;location&gt;local&lt;/location&gt;
+    &lt;level&gt;12&lt;/level&gt;
+    &lt;timeout&gt;600&lt;/timeout&gt;
+  &lt;/active-response&gt;
+
+  &lt;!-- Snort active response 配置 --&gt;
+
+  &lt;active-response&gt;
+      &lt;command&gt;firewall-drop&lt;/command&gt;
+      &lt;location&gt;local&lt;/location&gt;
+      &lt;rules_id&gt;20101&lt;/rules_id&gt; 
+      &lt;timeout&gt;600&lt;/timeout&gt; 
+  &lt;/active-response&gt;
+
+  &lt;active-response&gt;
+      &lt;command&gt;host-deny&lt;/command&gt;
+      &lt;location&gt;local&lt;/location&gt;
+      &lt;rules_id&gt;20101&lt;/rules_id&gt; 
+      &lt;timeout&gt;600&lt;/timeout&gt; 
+  &lt;/active-response&gt;
+
+# 重启服务，
+systemctl restart wazuh-manager.service
+
+参考：
+https://groups.google.com/forum/#!msg/wazuh/8cu1hZ9PHCM/RiPK41gWAgAJ
+https://documentation.wazuh.com/current/user-manual/reference/ossec-conf/localfile.html?highlight=localfile#log-format
+/var/ossec/ruleset/decoders/0285-snort_decoders.xml
+/var/ossec/ruleset/rules/0240-ids_rules.xml
+https://github.com/wazuh/wazuh-ruleset/blob/master/decoders/0285-snort_decoders.xml
+
+
+# 2.Suricata
+省略
+
+参考：
+https://github.com/wazuh/wazuh/issues/202
+https://documentation.wazuh.com/current/user-manual/ruleset/custom.html
+https://documentation.wazuh.com/current/user-manual/ruleset/json-decoder.html
+
+调试/测试工具：
+/var/ossec/bin/ossec-logtest
+
+</code></pre>
+
+<p>效果图：
+
+<figure >
+    
+        <img src="images/ty-practical-guide-to-threat-hunting-03-img02.jpeg" />
+    
+    
+</figure>
+
+
+<figure >
+    
+        <img src="images/ty-practical-guide-to-threat-hunting-03-img03.jpeg" />
+    
+    
+</figure>
+</p>
+
+<h3 id="9-未完待续">9.未完待续</h3>
+
+<pre><code>
+1.机器学习实例
+2.Wazuh和Snort/Suricata事件关联
+
+</code></pre>
+
+<h3 id="10-致谢">10.致谢</h3>
+
+<p><strong>Santiago Basset@Wazuh Team</strong></p>
+
+<p><a href="https://mp.weixin.qq.com/s/ynOdeOyP8qpiTX6PtR5-pg"><strong>微信公众号：威胁猎杀实战（三）：基于Wazuh, Snort/Suricata和Elastic Stack的SOC</strong></a></p>
+
+                      
+<div class="bdsharebuttonbox">
+<a href="#" class="bds_more" data-cmd="more"></a>
+<a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>
+<a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+<a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+<a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a>
+<a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a>
+</div>
+
+<script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":["mshare","qzone","tsina","weixin","douban","sqq","youdao","fbook","twi","linkedin","evernotecn","copy"],"bdPic":"","bdStyle":"1","bdSize":"32"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='/static/api/js/share.js'];</script>
+
+
+                    </div>
+                    <div style="border: 1px dashed #e0e0e0; padding: 10px 10px 10px 10px; background-color: #fffeee; background-repeat: no-repeat; background-attachment: scroll; background-position: 1% 50%; -moz-background-size: auto auto; -moz-background-clip: -moz-initial; -moz-background-origin: -moz-initial; -moz-background-inline-policy: -moz-initial;">
+                        <div style="float:left;margin-top:0px;">
+                        <img src="https://blog.tianyulab.com/public/qrcode.jpg" width="129px" height="129px"/>
+                        <div style="text-align:center;"></div>
+                        </div>
+                        <div>
+                            <p style="margin-top:0px;">作者：<a target="_blank" href="http://www.Zer0d0y.info/">Zer0d0y</a>
+                            <br />微信关注：Zer0d0y
+                            <br />本文出处：<a target="_blank" href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-03/">https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-03/</a>
+                            <br />
+                            本站评论使用Disqus，如果长时间无法加载，请切换至“自由”互联网。
+                            <br />文章版权归本人所有，欢迎转载，但未经作者同意必须保留此段声明，且在文章页面明显位置给出原文连接，否则保留追究法律责任的权利。 </p>
+                        </div>
+                    </div>
+                    <div class="clear"></div>
+                  </div>
+                  
+
+                </div>
+                
+              </article>
+              
+              <div class="clear"></div>
+              
+              
+              
+            </div>
+          </section>
+          <div class="sidebar s1">
+  <a class="sidebar-toggle" title="Expand Sidebar"><i class="fa icon-sidebar-toggle"></i></a>
+  <div class="sidebar-content">
+    <div class="sidebar-top group">
+      <p>Follow:</p>
+      <ul class="social-links">
+    <li>
+    <a class="social-tooltip" title="微博"
+        href="http://weibo.com/Zer0d0y1" target="_blank">
+        <i class="fa fa-weibo"></i>
+    </a>
+    </li>
+    <li>
+    <a class="social-tooltip" title="Twitter" rel="nofollow"
+        href="https://twitter.com/Zer0d0y" target="_blank">
+        <i class="fa fa-twitter"></i>
+    </a>
+    </li>
+    <li>
+    <a class="social-tooltip" title="GitHub"
+        href="https://github.com/tianyulab" target="_blank">
+        <i class="fa fa-github"></i>
+    </a>
+    </li>
+</ul>
+
+    </div>
+    <div class="widget qrcode">
+    <img src="https://blog.tianyulab.com/public/qrcode.jpg" alt="qrcode" width="172px" height="172px"/>
+    <p> 天御实验室<br/> 威胁感知、威胁猎杀 <br /></p>
+</div>
+
+    <ul class="post-nav group">
+      <li class="next">
+        
+        <a href="https://blog.tianyulab.com/post/ty-practical-guide-to-threat-hunting-02/" rel="next">
+          <i class="fa fa-chevron-right"></i>
+          <strong>Next post</strong>
+          <span>威胁猎杀实战（二）：NIDS和HIDS关联</span>
+        </a>
+        
+      </li>
+      <li class="previous">
+        
+      </li>
+    </ul>
+    <div id="search-2" class="widget widget_search"><h3>Search</h3>
+      <form method="get" class="searchform themeform" action="https://www.google.com/search">
+        <div>
+          <input type="text" class="search" name="q" placeholder="Press enter to start searching">
+        </div>
+      </form>
+    </div>
+  </div>
+  
+</div>
+
+          <div class="sidebar s2">
+  <a class="sidebar-toggle" title="Expand Sidebar"><i class="fa icon-sidebar-toggle"></i></a>
+  <div class="sidebar-content">
+    <div class="sidebar-top group">
+      <p>More</p>
+    </div>
+    <div id="categories-2" class="widget widget_categories"><h3>Categories</h3>
+      <ul>
+        
+          <li class="cat-item cat-item-1">
+            <a rel="nofollow" href="https://blog.tianyulab.com/categories/%E5%A8%81%E8%83%81%E6%84%9F%E7%9F%A5/">威胁感知</a>
+          </li>
+        
+          <li class="cat-item cat-item-1">
+            <a rel="nofollow" href="https://blog.tianyulab.com/categories/%E5%A8%81%E8%83%81%E6%A3%80%E6%B5%8B/">威胁检测</a>
+          </li>
+        
+          <li class="cat-item cat-item-1">
+            <a rel="nofollow" href="https://blog.tianyulab.com/categories/%E5%A8%81%E8%83%81%E7%8C%8E%E6%9D%80/">威胁猎杀</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  <footer id="footer">
+  <section class="container" id="footer-bottom">
+    <div class="container-inner">
+      <a id="back-to-top" href="#"><i class="fa fa-angle-up"></i></a>
+      <div class="pad group">
+        <div class="grid one-half">
+          <div id="copyright">
+            <p>Copyright © 2018. All Rights Reserved. <br>Powered by
+              <a rel="nofollow" href="http://gohugo.io/" target="_blank">Hugo - Static Site Generator</a>.
+            </p>
+          </div>
+          
+        </div>
+        
+        <div class="grid one-half last">
+          <ul class="social-links">
+    <li>
+    <a class="social-tooltip" title="微博"
+        href="http://weibo.com/Zer0d0y1" target="_blank">
+        <i class="fa fa-weibo"></i>
+    </a>
+    </li>
+    <li>
+    <a class="social-tooltip" title="Twitter" rel="nofollow"
+        href="https://twitter.com/Zer0d0y" target="_blank">
+        <i class="fa fa-twitter"></i>
+    </a>
+    </li>
+    <li>
+    <a class="social-tooltip" title="GitHub"
+        href="https://github.com/tianyulab" target="_blank">
+        <i class="fa fa-github"></i>
+    </a>
+    </li>
+</ul>
+
+        </div>
+      </div>
+
+    </div>
+    
+  </section>
+  
+</footer>
+
+</div>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-10147768-2', 'auto');
+  ga('send', 'pageview');
+
+  $('#messagesbsb').remove();
+
+</script>
+</body>
+</html>
+
